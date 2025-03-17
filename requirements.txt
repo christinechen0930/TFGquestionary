@@ -1,0 +1,7 @@
+streamlit
+requests
+sentence-transformers
+torch
+PyMuPDF
+python-docx
+tavily
