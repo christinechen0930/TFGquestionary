@@ -2,6 +2,6 @@ streamlit
 requests
 sentence-transformers
 torch
-PyMuPDF
+pymupdf
 python-docx
-tavily
+tavily-python
