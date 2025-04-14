@@ -1,7 +1,8 @@
 streamlit
-requests
 sentence-transformers
 torch
-pymupdf
+git+https://github.com/streamlit/streamlit.git
+requests
 python-docx
+pymupdf
 tavily-python
