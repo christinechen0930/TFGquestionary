@@ -8,3 +8,4 @@ requests>=2.31.0
 tavily
 google-generativeai>=0.3.2
 rich>=13.5.0
+git+https://github.com/your_username/tavily.git
