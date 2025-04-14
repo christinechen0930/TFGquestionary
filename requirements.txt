@@ -1,3 +1,5 @@
+# 升級 pip 以確保安裝過程順利
+pip>=22.3
 torch>=2.0.0
 sentence-transformers>=2.2.2
 PyMuPDF>=1.22.0
