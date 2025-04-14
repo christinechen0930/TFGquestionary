@@ -1,26 +1,9 @@
-# 主框架
-streamlit
-
-# 語義搜尋模型
-sentence-transformers
-
-# 處理 PDF
-PyMuPDF
-
-# 處理 docx
-python-docx
-
-# 處理向量相似度
-torch
-
-# 發 HTTP request 用
-requests
-
-# Gemini API 回應 JSON 用
-google-generativeai
-
-# 網頁搜尋用
+streamlit>=1.31
+sentence-transformers>=2.2.2
+PyMuPDF>=1.22.0
+python-docx>=0.8.11
+torch>=2.0.0
+requests>=2.31.0
 tavily
-
-# 美化錯誤訊息（可選）
-rich
+google-generativeai>=0.3.2
+rich>=13.5.0
