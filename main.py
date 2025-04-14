@@ -7,12 +7,11 @@ import time
 import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 import fitz  # PyMuPDF
-import docx  # 需要安裝 python-docx
 from tavily import TavilyClient
 
 # ====== 設定 API Key ======
-TAVILY_API_KEY = "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"
-GEMINI_API_KEY = "AIzaSyC25eTdPDzuMqv3ZE_I8l6gpuv0faBA88c"
+TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
+GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
 # ====== 建立必要資料夾 ======
@@ -52,20 +51,13 @@ def search_and_download_pdfs(keyword):
 
     return pdf_paths
 
-# ====== 讀取 PDF 和 DOCX ======
+# ====== 讀取 PDF ======
 def read_pdf(file_path):
     try:
         doc = fitz.Document(file_path)
         return [page.get_text() for page in doc]
     except Exception as e:
         return [f"讀取 PDF 錯誤：{str(e)}"]
-
-def read_docx(file):
-    try:
-        doc = docx.Document(file)
-        return [para.text.strip() for para in doc.paragraphs if para.text.strip()]
-    except Exception as e:
-        return [f"讀取 DOCX 錯誤：{str(e)}"]
 
 # ====== 取得相關內容 ======
 def retrieve_relevant_content(task, paragraphs):
@@ -77,25 +69,17 @@ def retrieve_relevant_content(task, paragraphs):
     return " ".join([paragraphs[idx] for idx in top_results.indices])
 
 # ====== 組合回應 ======
-def generate_response_combined(task, keyword, file):
-    if file:
-        if file.name.endswith(".pdf"):
-            paragraphs = read_pdf(file)
-        elif file.name.endswith(".docx"):
-            paragraphs = read_docx(file)
-        else:
-            return "❌ 不支援的檔案格式，請上傳 PDF 或 DOCX 格式的檔案"
-    else:
-        if not keyword.strip():
-            return "❌ 請輸入關鍵字或上傳檔案"
+def generate_response_combined(task, keyword, file=None):
+    if not keyword.strip():
+        return "❌ 請輸入關鍵字"
 
-        pdf_paths = search_and_download_pdfs(keyword)
-        if isinstance(pdf_paths, str):
-            return pdf_paths
+    pdf_paths = search_and_download_pdfs(keyword)
+    if isinstance(pdf_paths, str):
+        return pdf_paths
 
-        paragraphs = []
-        for pdf_path in pdf_paths:
-            paragraphs.extend(read_pdf(pdf_path))
+    paragraphs = []
+    for pdf_path in pdf_paths:
+        paragraphs.extend(read_pdf(pdf_path))
 
     if not paragraphs or "錯誤" in paragraphs[0]:
         return paragraphs[0]
@@ -135,11 +119,9 @@ st.title("🌱 綠園事務詢問欄")
 
 task = st.text_input("輸入詢問事項", "例如：如何申請交換學生？")
 keyword = st.text_input("輸入關鍵字（自動搜尋北一女 PDF）", "例如：招生簡章")
-file_input = st.file_uploader("或上傳 PDF / DOCX", type=["pdf", "docx"])
 
-# 處理按鈕事件
 if st.button("生成回答"):
     with st.spinner('正在處理...'):
-        response = generate_response_combined(task, keyword, file_input)
+        response = generate_response_combined(task, keyword)
     st.success('處理完成！')
     st.markdown(response)
