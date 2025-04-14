@@ -4,5 +4,5 @@ torch
 git+https://github.com/streamlit/streamlit.git
 requests
 python-docx
-pymupdf
+PyMuPDF
 tavily-python
