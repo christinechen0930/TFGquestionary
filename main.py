@@ -1,23 +1,10 @@
 import subprocess
 import sys
-
-# 自動安裝requirements.txt中的套件
-def install_requirements():
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
-        print("所有套件已安裝")
-    except subprocess.CalledProcessError as e:
-        print(f"安裝套件時出錯：{e}")
-
-# 在程式開始時安裝所有必要的套件
-install_requirements()
-
-# ====== 其他程式碼 ======
-
-import streamlit as st
-import requests
 import os
 import torch
+import requests
+import time
+import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 import fitz  # PyMuPDF
 import docx  # 需要安裝 python-docx
@@ -26,21 +13,27 @@ from tavily import TavilyClient
 # ====== 設定 API Key ======
 TAVILY_API_KEY = "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"
 GEMINI_API_KEY = "AIzaSyC25eTdPDzuMqv3ZE_I8l6gpuv0faBA88c"
-
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
 # ====== 建立必要資料夾 ======
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
-# ====== 載入語義模型（直接從 Hugging Face 線上）======
-model = SentenceTransformer("sentence-transformers/paraphrase-MiniLM-L6-v2")
+# ====== 加載模型並緩存 ======
+@st.cache_resource
+def load_model():
+    return SentenceTransformer("sentence-transformers/paraphrase-MiniLM-L6-v2")
 
-# ====== 功能區塊 ======
+model = load_model()
 
+# ====== 搜尋與下載 PDF ======
 def search_and_download_pdfs(keyword):
     query = f"site:fg.tp.edu.tw {keyword} filetype:pdf"
-    response = tavily_client.search(query)
+    try:
+        response = tavily_client.search(query)
+    except Exception as e:
+        return f"❌ 服務錯誤：{e}"
+
     pdf_links = [result["url"] for result in response.get("results", []) if result["url"].endswith(".pdf")]
 
     if not pdf_links:
@@ -59,6 +52,7 @@ def search_and_download_pdfs(keyword):
 
     return pdf_paths
 
+# ====== 讀取 PDF 和 DOCX ======
 def read_pdf(file_path):
     try:
         doc = fitz.Document(file_path)
@@ -73,6 +67,7 @@ def read_docx(file):
     except Exception as e:
         return [f"讀取 DOCX 錯誤：{str(e)}"]
 
+# ====== 取得相關內容 ======
 def retrieve_relevant_content(task, paragraphs):
     paragraph_embeddings = model.encode(paragraphs, convert_to_tensor=True)
     query_embedding = model.encode(task, convert_to_tensor=True)
@@ -81,6 +76,7 @@ def retrieve_relevant_content(task, paragraphs):
     top_results = torch.topk(scores, k=top_k)
     return " ".join([paragraphs[idx] for idx in top_results.indices])
 
+# ====== 組合回應 ======
 def generate_response_combined(task, keyword, file):
     if file:
         if file.name.endswith(".pdf"):
@@ -88,7 +84,7 @@ def generate_response_combined(task, keyword, file):
         elif file.name.endswith(".docx"):
             paragraphs = read_docx(file)
         else:
-            return "❌ 不支援的檔案格式，請上傳 PDF 或 DOCX"
+            return "❌ 不支援的檔案格式，請上傳 PDF 或 DOCX 格式的檔案"
     else:
         if not keyword.strip():
             return "❌ 請輸入關鍵字或上傳檔案"
@@ -121,25 +117,29 @@ def generate_response_combined(task, keyword, file):
     headers = {"Content-Type": "application/json"}
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-    response = requests.post(f"{api_url}?key={GEMINI_API_KEY}", json=payload, headers=headers)
-
-    if response.status_code == 200:
-        response_json = response.json()
-        if "candidates" in response_json and len(response_json["candidates"]) > 0:
-            return response_json["candidates"][0]["content"]["parts"][0]["text"]
+    try:
+        response = requests.post(f"{api_url}?key={GEMINI_API_KEY}", json=payload, headers=headers)
+        if response.status_code == 200:
+            response_json = response.json()
+            if "candidates" in response_json and len(response_json["candidates"]) > 0:
+                return response_json["candidates"][0]["content"]["parts"][0]["text"]
+            else:
+                return "❌ 無法取得模型回答"
         else:
-            return "❌ 無法取得模型回答"
-    else:
-        return f"❌ 錯誤：{response.status_code}, {response.text}"
+            return f"❌ 錯誤：{response.status_code}, {response.text}"
+    except Exception as e:
+        return f"❌ 請求失敗：{e}"
 
 # ====== Streamlit UI ======
-
 st.title("🌱 綠園事務詢問欄")
 
 task = st.text_input("輸入詢問事項", "例如：如何申請交換學生？")
 keyword = st.text_input("輸入關鍵字（自動搜尋北一女 PDF）", "例如：招生簡章")
 file_input = st.file_uploader("或上傳 PDF / DOCX", type=["pdf", "docx"])
 
+# 處理按鈕事件
 if st.button("生成回答"):
-    response = generate_response_combined(task, keyword, file_input)
+    with st.spinner('正在處理...'):
+        response = generate_response_combined(task, keyword, file_input)
+    st.success('處理完成！')
     st.markdown(response)
