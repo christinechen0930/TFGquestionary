@@ -1,7 +1,6 @@
-streamlit
+streamlit>=1.32.0
 sentence-transformers
 torch
-git+https://github.com/streamlit/streamlit.git
 requests
 python-docx
 PyMuPDF
