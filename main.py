@@ -17,14 +17,8 @@ tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
-# ====== 載入語義模型 ======
-MODEL_PATH = "./paraphrase-MiniLM-L6-v2"
-if not os.path.exists(MODEL_PATH):
-    st.error("❌ 找不到語義搜尋模型，請先使用以下指令下載：\n"
-             "`git clone https://huggingface.co/sentence-transformers/paraphrase-MiniLM-L6-v2`")
-    st.stop()
-
-model = SentenceTransformer(MODEL_PATH)
+# ====== 載入語義模型（直接從 Hugging Face 線上）======
+model = SentenceTransformer("sentence-transformers/paraphrase-MiniLM-L6-v2")
 
 # ====== 功能區塊 ======
 
