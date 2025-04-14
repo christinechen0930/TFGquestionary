@@ -1,3 +1,19 @@
+import subprocess
+import sys
+
+# 自動安裝requirements.txt中的套件
+def install_requirements():
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+        print("所有套件已安裝")
+    except subprocess.CalledProcessError as e:
+        print(f"安裝套件時出錯：{e}")
+
+# 在程式開始時安裝所有必要的套件
+install_requirements()
+
+# ====== 其他程式碼 ======
+
 import streamlit as st
 import requests
 import os
@@ -24,27 +40,24 @@ model = SentenceTransformer("sentence-transformers/paraphrase-MiniLM-L6-v2")
 
 def search_and_download_pdfs(keyword):
     query = f"site:fg.tp.edu.tw {keyword} filetype:pdf"
-    try:
-        response = tavily_client.search(query)
-        pdf_links = [result["url"] for result in response.get("results", []) if result["url"].endswith(".pdf")]
+    response = tavily_client.search(query)
+    pdf_links = [result["url"] for result in response.get("results", []) if result["url"].endswith(".pdf")]
 
-        if not pdf_links:
-            return "❌ 沒有找到相關的 PDF 檔案！"
+    if not pdf_links:
+        return "❌ 沒有找到相關的 PDF 檔案！"
 
-        pdf_paths = []
-        for index, pdf_url in enumerate(pdf_links):
-            try:
-                response = requests.get(pdf_url, timeout=10)
-                pdf_filename = os.path.join(DOWNLOAD_FOLDER, f"{keyword}_{index + 1}.pdf")
-                with open(pdf_filename, "wb") as f:
-                    f.write(response.content)
-                pdf_paths.append(pdf_filename)
-            except Exception as e:
-                return f"❌ 下載失敗：{pdf_url}，錯誤：{e}"
+    pdf_paths = []
+    for index, pdf_url in enumerate(pdf_links):
+        try:
+            response = requests.get(pdf_url, timeout=10)
+            pdf_filename = os.path.join(DOWNLOAD_FOLDER, f"{keyword}_{index + 1}.pdf")
+            with open(pdf_filename, "wb") as f:
+                f.write(response.content)
+            pdf_paths.append(pdf_filename)
+        except Exception as e:
+            return f"❌ 下載失敗：{pdf_url}，錯誤：{e}"
 
-        return pdf_paths
-    except Exception as e:
-        return f"❌ 搜尋 PDF 發生錯誤：{e}"
+    return pdf_paths
 
 def read_pdf(file_path):
     try:
@@ -81,7 +94,7 @@ def generate_response_combined(task, keyword, file):
             return "❌ 請輸入關鍵字或上傳檔案"
 
         pdf_paths = search_and_download_pdfs(keyword)
-        if isinstance(pdf_paths, str):  # 如果返回的是錯誤訊息
+        if isinstance(pdf_paths, str):
             return pdf_paths
 
         paragraphs = []
@@ -108,20 +121,16 @@ def generate_response_combined(task, keyword, file):
     headers = {"Content-Type": "application/json"}
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-    try:
-        response = requests.post(f"{api_url}?key={GEMINI_API_KEY}", json=payload, headers=headers)
+    response = requests.post(f"{api_url}?key={GEMINI_API_KEY}", json=payload, headers=headers)
 
-        if response.status_code == 200:
-            response_json = response.json()
-            if "candidates" in response_json and len(response_json["candidates"]) > 0:
-                return response_json["candidates"][0]["content"]["parts"][0]["text"]
-            else:
-                return "❌ 無法取得模型回答"
+    if response.status_code == 200:
+        response_json = response.json()
+        if "candidates" in response_json and len(response_json["candidates"]) > 0:
+            return response_json["candidates"][0]["content"]["parts"][0]["text"]
         else:
-            return f"❌ 錯誤：{response.status_code}, {response.text}"
-
-    except requests.exceptions.RequestException as e:
-        return f"❌ 發送請求時發生錯誤：{e}"
+            return "❌ 無法取得模型回答"
+    else:
+        return f"❌ 錯誤：{response.status_code}, {response.text}"
 
 # ====== Streamlit UI ======
 
