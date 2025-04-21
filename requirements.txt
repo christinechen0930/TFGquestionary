@@ -1,4 +1,3 @@
-# 升級 pip 以確保安裝過程順利
 pip>=22.3
 torch>=2.0.0
 sentence-transformers>=2.2.2
@@ -8,3 +7,4 @@ requests>=2.31.0
 tavily-python
 google-generativeai>=0.3.2
 rich>=13.5.0
+re
