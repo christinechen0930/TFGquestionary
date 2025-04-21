@@ -127,7 +127,6 @@ def generate_response_combined(task, keyword, file=None):
     headers = {"Content-Type": "application/json"}
     payload = {
         "contents": [
-            {"role": "system", "parts": [{"text": "你是北一女的校務導師，擅長協助學生查找招生、校規、社團與行政資訊"}]},
             {"role": "user", "parts": [{"text": prompt}]}
         ]
     }
@@ -144,8 +143,7 @@ def generate_response_combined(task, keyword, file=None):
             return f"❌ 錯誤：{response.status_code}, {response.text}"
     except Exception as e:
         return f"❌ 請求失敗：{e}"
-
-
+        
 # ====== Streamlit UI ======
 st.title("🌱 綠園事務詢問欄")
 
