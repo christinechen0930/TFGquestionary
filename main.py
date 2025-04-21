@@ -142,9 +142,10 @@ def generate_response_combined(task, keyword, file=None):
     except Exception as e:
         return f"❌ 請求失敗：{e}"
 
- 
 
 # ====== Streamlit UI ======
+st.set_page_config(page_title="🌿 綠園事務詢問欄", page_icon="🌱", layout="centered")
+
 st.title("🌱 綠園事務詢問欄")
 
 task = st.text_input("輸入詢問事項", "例如：如何申請交換學生？")
