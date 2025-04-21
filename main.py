@@ -109,13 +109,17 @@ def generate_response_combined(task, keyword, file=None):
             paragraphs.extend(read_pdf(pdf_path))
             pdf_sources.append(pdf_path)
 
-    if not paragraphs or "錯誤" in paragraphs[0]:
+    if not paragraphs or (isinstance(paragraphs, list) and "錯誤" in paragraphs[0]):
         return paragraphs[0]
 
     relevant_content = retrieve_relevant_content(task, paragraphs)
     if not relevant_content.strip():
         return "❌ 找不到與問題相關的內容，請嘗試其他關鍵字。"
 
+    # 產生來源清單 Markdown 連結
+    source_links = "\n".join([f"- [{os.path.basename(path)}]({path})" for path in pdf_sources])
+
+    # Prompt 設定
     prompt = f"""
 你是一位了解北一女中行政流程與校內事務的輔導老師，請根據下方提供的文件內容協助回答問題。
 回答請使用繁體中文，並以條列式或摘要方式簡潔表達。
@@ -126,9 +130,10 @@ def generate_response_combined(task, keyword, file=None):
 {relevant_content}
 
 來源清單：
-{chr(10).join(pdf_sources)}
+{source_links}
     """
 
+    # Gemini API 請求
     api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
     headers = {"Content-Type": "application/json"}
     payload = {
@@ -142,13 +147,16 @@ def generate_response_combined(task, keyword, file=None):
         if response.status_code == 200:
             response_json = response.json()
             if "candidates" in response_json and len(response_json["candidates"]) > 0:
-                return response_json["candidates"][0]["content"]["parts"][0]["text"]
+                model_reply = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                # 同時回傳模型回答與來源清單
+                return model_reply + "\n\n---\n### 📄 來源 PDF 文件\n" + source_links
             else:
                 return "❌ 無法取得模型回答"
         else:
             return f"❌ 錯誤：{response.status_code}, {response.text}"
     except Exception as e:
         return f"❌ 請求失敗：{e}"
+
 
 # ====== Streamlit UI ======
 st.title("🌱 綠園事務詢問欄")
