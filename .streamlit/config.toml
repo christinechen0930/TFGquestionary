@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#2E7D32"         # 主按鈕 & 標題文字：森林綠
+backgroundColor = "#F1F8E9"      # 背景：淡淡草綠
+secondaryBackgroundColor = "#C8E6C9"  # 卡片區域：嫩綠
+textColor = "#1B5E20"            # 主要文字：墨綠
+font = "sans serif"              # 字體：無襯線
