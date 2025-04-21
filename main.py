@@ -6,6 +6,7 @@ from sentence_transformers import SentenceTransformer, util
 import fitz  # PyMuPDF
 from tavily import TavilyClient
 import re
+import urllib.parse  # 用來編碼特殊字符
 
 # ====== 設定 API Key ======
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
@@ -40,7 +41,8 @@ def search_and_download_pdfs(keyword):
     for index, pdf_url in enumerate(pdf_links):
         try:
             response = requests.get(pdf_url, timeout=10)
-            pdf_filename = os.path.join("downloads", f"{keyword}_{index + 1}.pdf")
+            # URL 編碼檔案名稱，避免特殊字符影響檔案路徑
+            pdf_filename = os.path.join("downloads", f"{urllib.parse.quote(keyword)}_{index + 1}.pdf")
             with open(pdf_filename, "wb") as f:
                 f.write(response.content)
             pdf_paths.append(pdf_filename)
