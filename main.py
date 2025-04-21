@@ -8,6 +8,7 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 import fitz  # PyMuPDF
 from tavily import TavilyClient
+import re
 
 # ====== 設定 API Key ======
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
@@ -51,35 +52,56 @@ def search_and_download_pdfs(keyword):
 
     return pdf_paths
 
+
+def clean_and_split_text(text):
+    # 移除頁碼、重複空白、註解或其他噪音
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"第\s*\d+\s*頁", "", text)
+    # 切段
+    paragraphs = re.split(r'(?<=[。！？])', text)
+    return [p.strip() for p in paragraphs if len(p.strip()) > 10]
+
 # ====== 讀取 PDF ======
 def read_pdf(file_path):
     try:
         doc = fitz.Document(file_path)
-        return [page.get_text() for page in doc]
+        all_paragraphs = []
+        for page in doc:
+            raw_text = page.get_text()
+            paragraphs = clean_and_split_text(raw_text)
+            all_paragraphs.extend(paragraphs)
+        return all_paragraphs
     except Exception as e:
         return [f"讀取 PDF 錯誤：{str(e)}"]
+
 
 # ====== 取得相關內容 ======
 def retrieve_relevant_content(task, paragraphs):
     paragraph_embeddings = model.encode(paragraphs, convert_to_tensor=True)
     query_embedding = model.encode(task, convert_to_tensor=True)
     scores = util.pytorch_cos_sim(query_embedding, paragraph_embeddings)[0]
-    top_k = min(5, len(paragraphs))
+    
+    # 拿 top 10，避免只看少量段落
+    top_k = min(10, len(paragraphs))
     top_results = torch.topk(scores, k=top_k)
-    return " ".join([paragraphs[idx] for idx in top_results.indices])
+    return "\n".join([paragraphs[idx] for idx in top_results.indices])
 
 # ====== 組合回應 ======
 def generate_response_combined(task, keyword, file=None):
-    if not keyword.strip():
+    if not keyword.strip() and not file:
         return "❌ 請輸入關鍵字"
 
-    pdf_paths = search_and_download_pdfs(keyword)
-    if isinstance(pdf_paths, str):
-        return pdf_paths
+    if file:
+        # 使用者上傳的 PDF
+        paragraphs = read_pdf(file)
+    else:
+        pdf_paths = search_and_download_pdfs(keyword)
+        if isinstance(pdf_paths, str):
+            return pdf_paths
 
-    paragraphs = []
-    for pdf_path in pdf_paths:
-        paragraphs.extend(read_pdf(pdf_path))
+        paragraphs = []
+        for pdf_path in pdf_paths:
+            paragraphs.extend(read_pdf(pdf_path))
 
     if not paragraphs or "錯誤" in paragraphs[0]:
         return paragraphs[0]
@@ -89,17 +111,23 @@ def generate_response_combined(task, keyword, file=None):
         return "❌ 找不到與問題相關的內容，請嘗試其他關鍵字。"
 
     prompt = f"""
-    請根據以下文件內容回答問題：
-    問題：{task}
-    相關內容：
-    {relevant_content}
+你是一位了解北一女中行政流程與校內事務的輔導老師，請根據下方提供的文件內容協助回答問題。
+回答請使用繁體中文，並以條列式或摘要方式簡潔表達。
 
-    請用繁體中文回答，並用條列式或摘要方式簡潔表達。
+問題：{task}
+
+相關內容：
+{relevant_content}
     """
 
     api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
     headers = {"Content-Type": "application/json"}
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    payload = {
+        "contents": [
+            {"role": "system", "parts": [{"text": "你是北一女的校務導師，擅長協助學生查找招生、校規、社團與行政資訊"}]},
+            {"role": "user", "parts": [{"text": prompt}]}
+        ]
+    }
 
     try:
         response = requests.post(f"{api_url}?key={GEMINI_API_KEY}", json=payload, headers=headers)
@@ -113,6 +141,8 @@ def generate_response_combined(task, keyword, file=None):
             return f"❌ 錯誤：{response.status_code}, {response.text}"
     except Exception as e:
         return f"❌ 請求失敗：{e}"
+
+ 
 
 # ====== Streamlit UI ======
 st.title("🌱 綠園事務詢問欄")
