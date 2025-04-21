@@ -15,6 +15,9 @@ TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
+# ====== 設定頁面配置 ======
+st.set_page_config(page_title="🌿 綠園事務詢問欄", page_icon="🌱", layout="centered")
+
 # ====== 建立必要資料夾 ======
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
@@ -144,8 +147,6 @@ def generate_response_combined(task, keyword, file=None):
 
 
 # ====== Streamlit UI ======
-st.set_page_config(page_title="🌿 綠園事務詢問欄", page_icon="🌱", layout="centered")
-
 st.title("🌱 綠園事務詢問欄")
 
 task = st.text_input("輸入詢問事項", "例如：如何申請交換學生？")
