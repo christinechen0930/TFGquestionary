@@ -97,14 +97,17 @@ def generate_response_combined(task, keyword, file=None):
     if file:
         # 使用者上傳的 PDF
         paragraphs = read_pdf(file)
+        pdf_sources = [file.name]
     else:
         pdf_paths = search_and_download_pdfs(keyword)
         if isinstance(pdf_paths, str):
             return pdf_paths
 
         paragraphs = []
+        pdf_sources = []
         for pdf_path in pdf_paths:
             paragraphs.extend(read_pdf(pdf_path))
+            pdf_sources.append(pdf_path)
 
     if not paragraphs or "錯誤" in paragraphs[0]:
         return paragraphs[0]
@@ -121,6 +124,9 @@ def generate_response_combined(task, keyword, file=None):
 
 相關內容：
 {relevant_content}
+
+來源清單：
+{chr(10).join(pdf_sources)}
     """
 
     api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
@@ -143,7 +149,7 @@ def generate_response_combined(task, keyword, file=None):
             return f"❌ 錯誤：{response.status_code}, {response.text}"
     except Exception as e:
         return f"❌ 請求失敗：{e}"
-        
+
 # ====== Streamlit UI ======
 st.title("🌱 綠園事務詢問欄")
 
