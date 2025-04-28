@@ -6,7 +6,6 @@ from sentence_transformers import SentenceTransformer, util
 import fitz  # PyMuPDF
 from tavily import TavilyClient
 import re
-import urllib.parse  # 用來編碼特殊字符
 
 # ====== 設定 API Key ======
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
@@ -15,7 +14,7 @@ tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
 # ====== 設定頁面配置 ======
 st.set_page_config(page_title="🌿 綠園事務詢問欄", page_icon="🌱", layout="centered")
-os.makedirs("downloads", exist_ok=True)  # 確保下載資料夾存在
+os.makedirs("downloads", exist_ok=True)
 
 # ====== 加載模型並緩存 ======
 @st.cache_resource
@@ -37,26 +36,23 @@ def search_and_download_pdfs(keyword):
     if not pdf_links:
         return "❌ 沒有找到相關的 PDF 檔案！"
 
-    pdf_paths = []
+    pdf_infos = []
     for index, pdf_url in enumerate(pdf_links):
         try:
             response = requests.get(pdf_url, timeout=10)
-            # URL 編碼檔案名稱，避免特殊字符影響檔案路徑
-            pdf_filename = os.path.join("downloads", f"{urllib.parse.quote(keyword)}_{index + 1}.pdf")
+            safe_keyword = re.sub(r'[\\/*?:"<>|]', "_", keyword)
+            pdf_filename = os.path.join("downloads", f"{safe_keyword}_{index + 1}.pdf")
             with open(pdf_filename, "wb") as f:
                 f.write(response.content)
-            pdf_paths.append(pdf_filename)
+            pdf_infos.append({"path": pdf_filename, "url": pdf_url})
         except Exception as e:
             return f"❌ 下載失敗：{pdf_url}，錯誤：{e}"
 
-    return pdf_paths
-
+    return pdf_infos
 
 def clean_and_split_text(text):
-    # 移除頁碼、重複空白、註解或其他噪音
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"第\s*\d+\s*頁", "", text)
-    # 切段
     paragraphs = re.split(r'(?<=[。！？])', text)
     return [p.strip() for p in paragraphs if len(p.strip()) > 10]
 
@@ -73,14 +69,12 @@ def read_pdf(file_path):
     except Exception as e:
         return [f"讀取 PDF 錯誤：{str(e)}"]
 
-
 # ====== 取得相關內容 ======
 def retrieve_relevant_content(task, paragraphs):
     paragraph_embeddings = model.encode(paragraphs, convert_to_tensor=True)
     query_embedding = model.encode(task, convert_to_tensor=True)
     scores = util.pytorch_cos_sim(query_embedding, paragraph_embeddings)[0]
-    
-    # 拿 top 10，避免只看少量段落
+
     top_k = min(10, len(paragraphs))
     top_results = torch.topk(scores, k=top_k)
     return "\n".join([paragraphs[idx] for idx in top_results.indices])
@@ -90,15 +84,13 @@ def generate_response_combined(task, keyword):
     if not keyword.strip():
         return "❌ 請輸入關鍵字"
 
-    pdf_paths = search_and_download_pdfs(keyword)
-    if isinstance(pdf_paths, str):
-        return pdf_paths
+    pdf_infos = search_and_download_pdfs(keyword)
+    if isinstance(pdf_infos, str):
+        return pdf_infos
 
     paragraphs = []
-    pdf_sources = []
-    for pdf_path in pdf_paths:
-        paragraphs.extend(read_pdf(pdf_path))
-        pdf_sources.append(pdf_path)
+    for info in pdf_infos:
+        paragraphs.extend(read_pdf(info["path"]))
 
     if not paragraphs or "錯誤" in paragraphs[0]:
         return paragraphs[0]
@@ -107,8 +99,8 @@ def generate_response_combined(task, keyword):
     if not relevant_content.strip():
         return "❌ 找不到與問題相關的內容，請嘗試其他關鍵字。"
 
-    # 產生來源清單 Markdown 連結
-    source_links = "\n".join([f"- [{os.path.basename(path)}]({path})" for path in pdf_sources])
+    # 產生來源清單 (用原始網址)
+    source_links = "\n".join([f"- [來源PDF]({info['url']})" for info in pdf_infos])
 
     # Prompt 設定
     prompt = f"""
@@ -139,7 +131,6 @@ def generate_response_combined(task, keyword):
             response_json = response.json()
             if "candidates" in response_json and len(response_json["candidates"]) > 0:
                 model_reply = response_json["candidates"][0]["content"]["parts"][0]["text"]
-                # 同時回傳模型回答與來源清單
                 return model_reply + "\n\n---\n### 📄 來源 PDF 文件\n" + source_links
             else:
                 return "❌ 無法取得模型回答"
