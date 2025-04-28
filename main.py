@@ -7,11 +7,6 @@ import fitz  # PyMuPDF
 from tavily import TavilyClient
 import re
 
-# ====== 設定 API Key ======
-TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
-
 # ====== 設定頁面配置 ======
 st.set_page_config(page_title="🌿 綠園事務詢問欄", page_icon="🌱", layout="centered")
 os.makedirs("downloads", exist_ok=True)
@@ -24,7 +19,7 @@ def load_model():
 model = load_model()
 
 # ====== 搜尋與下載 PDF ======
-def search_and_download_pdfs(keyword):
+def search_and_download_pdfs(keyword, tavily_client):
     query = f"site:fg.tp.edu.tw {keyword} filetype:pdf"
     try:
         response = tavily_client.search(query)
@@ -81,10 +76,15 @@ def retrieve_relevant_content(task, paragraphs):
 
 # ====== 組合回應 ======
 def generate_response_combined(task, keyword):
+    # 在這裡延遲讀取 Secret！
+    TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
+    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+    tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
+
     if not keyword.strip():
         return "❌ 請輸入關鍵字"
 
-    pdf_infos = search_and_download_pdfs(keyword)
+    pdf_infos = search_and_download_pdfs(keyword, tavily_client)
     if isinstance(pdf_infos, str):
         return pdf_infos
 
