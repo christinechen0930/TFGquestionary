@@ -27,11 +27,12 @@ model = load_model()
 def search_and_download_latest_pdf(keyword):
     query = f"site:fg.tp.edu.tw {keyword} filetype:pdf"
     try:
+        # 搜尋並設定排序條件：按日期排序
         response = tavily_client.search(
             query,
             search_depth="advanced",
             max_results=5,
-            sort_by="date"
+            sort_by="date"  # 確保結果是按日期排序
         )
     except Exception as e:
         return f"❌ 搜尋服務錯誤：{e}"
@@ -45,6 +46,7 @@ def search_and_download_latest_pdf(keyword):
         suggestion = suggest_words[torch.randint(0, len(suggest_words), (1,)).item()]
         return f"❌ 沒找到相關 PDF，建議嘗試其他關鍵字，例如：**{suggestion}**"
 
+    # 取最新的 PDF（即排序後的第一個）
     latest_pdf_url = pdf_links[0]
 
     try:
@@ -56,6 +58,7 @@ def search_and_download_latest_pdf(keyword):
         return [{"path": pdf_filename, "url": latest_pdf_url}]
     except Exception as e:
         return f"❌ PDF 下載失敗：{latest_pdf_url}，錯誤：{e}"
+
 
 # ====== 清理文字 ======
 def clean_and_split_text(text):
