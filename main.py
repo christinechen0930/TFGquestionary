@@ -1,8 +1,8 @@
+import gradio as gr
 import requests
 from bs4 import BeautifulSoup
 import os
 from datetime import datetime, timedelta
-import time
 
 # === 設定 ===
 BASE_URL = "https://www.fg.tp.edu.tw"
@@ -73,6 +73,7 @@ def download_attachments_from_announcement(announcement):
             file_url = href if href.startswith("http") else BASE_URL + href
             file_links.append(file_url)
 
+    downloaded_files = []
     for file_url in file_links:
         file_name = os.path.join(DOWNLOAD_FOLDER, os.path.basename(file_url))
 
@@ -80,24 +81,26 @@ def download_attachments_from_announcement(announcement):
             file_resp = requests.get(file_url, headers=HEADERS)
             with open(file_name, "wb") as f:
                 f.write(file_resp.content)
-            print(f"✅ 成功下載: {file_name}")
+            downloaded_files.append(f"✅ 成功下載: {file_name}")
         except Exception as e:
-            print(f"❌ 下載失敗: {file_url}, 錯誤: {e}")
+            downloaded_files.append(f"❌ 下載失敗: {file_url}, 錯誤: {e}")
+    
+    return downloaded_files
 
-# === 主流程 ===
-def main():
-    print(f"🚀 開始從北一女中校網抓最近 {DAYS_LIMIT} 天內有附件ㄉ公告...")
-
+# 使用Gradio介面
+def gradio_interface():
     announcements = fetch_announcements(NEWS_URL)
-
-    print(f"🎯 總共找到 {len(announcements)} 筆公告")
-
+    results = []
+    
     for ann in announcements:
-        print(f"🔍 處理公告：{ann['title']} ({ann['date'].strftime('%Y-%m-%d')})")
-        download_attachments_from_announcement(ann)
-        time.sleep(1)  # 禮貌一點，慢慢來避免被封XD
+        results.append(f"公告標題: {ann['title']} ({ann['date'].strftime('%Y-%m-%d')})")
+        download_results = download_attachments_from_announcement(ann)
+        results.extend(download_results)
+    
+    return "\n".join(results)
 
-    print("🏁 全部下載完成ㄌ！")
+# 設置 Gradio 介面
+iface = gr.Interface(fn=gradio_interface, inputs=None, outputs="text", live=True, title="北一女公告下載器", description="抓取並下載最近90天內的公告及附件")
 
-if __name__ == "__main__":
-    main()
+# 啟動 Gradio 應用
+iface.launch()
