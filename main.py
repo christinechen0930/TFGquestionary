@@ -148,4 +148,4 @@ if st.button("生成回答"):
     with st.spinner('正在處理...'):
         response = generate_response_combined(task, keyword, year_text)
     st.success('處理完成！')
-    st.markdown(response)  執行後出現：❌ 找不到包含「114學年度」的 PDF 文件！
+    st.markdown(response)
