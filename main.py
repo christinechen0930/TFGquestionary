@@ -161,6 +161,6 @@ st.markdown("---")
 if st.button("前往北一女校史頁面"):
     st.markdown(
         """
-        [點我進入北一女校史頁面](https://your-nbshistory-page-url.example.com)
+        [點我進入北一女校史頁面](https://christinechen0930.github.io/TFGquestionary/TFGhistory.html)
         """
     )
