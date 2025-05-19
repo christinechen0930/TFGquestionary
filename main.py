@@ -156,11 +156,7 @@ if st.button("生成回答"):
         st.markdown(response)
 
 st.markdown("---")
-
-# 新增按鈕連結到北一女校史頁面
 if st.button("前往北一女校史頁面"):
-    st.markdown(
-        """
-        [點我進入北一女校史頁面](https://christinechen0930.github.io/TFGquestionary/TFGhistory.html)
-        """
-    )
+    js = "window.open('https://christinechen0930.github.io/TFGquestionary/TFGhistory.html')"  # 開新分頁
+    st.components.v1.html(f"<script>{js}</script>", height=0, width=0)
+
