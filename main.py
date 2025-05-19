@@ -27,12 +27,11 @@ model = load_model()
 def search_and_download_latest_pdf(keyword):
     query = f"site:fg.tp.edu.tw {keyword} filetype:pdf"
     try:
-        # 搜尋並設定排序條件：按日期排序
         response = tavily_client.search(
             query,
             search_depth="advanced",
             max_results=5,
-            sort_by="date"  # 確保結果是按日期排序
+            sort_by="date"
         )
     except Exception as e:
         return f"❌ 搜尋服務錯誤：{e}"
@@ -41,12 +40,10 @@ def search_and_download_latest_pdf(keyword):
     pdf_links = [r["url"] for r in results if r["url"].endswith(".pdf")]
 
     if not pdf_links:
-        # 🔥 如果沒找到 PDF，自動建議新關鍵字
         suggest_words = ["招生", "校內公告", "學生活動", "校規", "交換學生"]
         suggestion = suggest_words[torch.randint(0, len(suggest_words), (1,)).item()]
         return f"❌ 沒找到相關 PDF，建議嘗試其他關鍵字，例如：**{suggestion}**"
 
-    # 取最新的 PDF（即排序後的第一個）
     latest_pdf_url = pdf_links[0]
 
     try:
@@ -58,7 +55,6 @@ def search_and_download_latest_pdf(keyword):
         return [{"path": pdf_filename, "url": latest_pdf_url}]
     except Exception as e:
         return f"❌ PDF 下載失敗：{latest_pdf_url}，錯誤：{e}"
-
 
 # ====== 清理文字 ======
 def clean_and_split_text(text):
@@ -113,7 +109,7 @@ def generate_response_combined(task, keyword):
     source_links = "\n".join([f"- [來源PDF]({info['url']})" for info in pdf_infos])
 
     prompt = f"""
-你是一位了解北一女中行政流程與校內事務的輔導老師，請根據下方提供的文件內容協助回答問題。
+你是一位了解北一女中行政流程與校內事務的輔導老師，請根據下方提供的文件內容協助回答問題，
 請使用繁體中文，以條列式或摘要方式簡潔表達。
 
 問題：{task}
@@ -123,7 +119,7 @@ def generate_response_combined(task, keyword):
 
 來源清單：
 {source_links}
-    """
+"""
 
     api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
     headers = {"Content-Type": "application/json"}
@@ -151,12 +147,20 @@ def generate_response_combined(task, keyword):
 st.title("🌱 綠園事務詢問欄")
 
 task = st.text_input("輸入詢問事項", "例如：如何申請交換學生？")
-keyword = st.text_input("輸入關鍵字（自動搜尋北一女 PDF）", "例如：招生簡章")
+keyword = st.text_input("輸入關鍵字（自動搜尋北一女 PDF）", "例如：招生簿")
 
 if st.button("生成回答"):
     with st.spinner('正在處理...'):
         response = generate_response_combined(task, keyword)
-    st.success('處理完成！')
-    st.markdown(response) 
+        st.success('處理完成！')
+        st.markdown(response)
 
+st.markdown("---")
 
+# 新增按鈕連結到北一女校史頁面
+if st.button("前往北一女校史頁面"):
+    st.markdown(
+        """
+        [點我進入北一女校史頁面](https://your-nbshistory-page-url.example.com)
+        """
+    )
