@@ -98,12 +98,10 @@ def generate_response_combined(task, keyword):
     content_text = soup.get_text()
     cleaned_paragraphs = clean_and_split_text(content_text)
 
-    # 擷取 PDF
-    all_links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".pdf")]
-    pdf_links = list({urljoin(page_url, link) for link in all_links})  # 去除重複
-    pdf_links = [re.sub(r' ', '%20', link) for link in pdf_links]      # 空白轉 %20
-    pdf_links_collected = []
+    # 擷取 PDF 連結
+    pdf_links = [urljoin(page_url, a["href"]) for a in soup.find_all("a", href=True) if a["href"].lower().endswith(".pdf")]
 
+    # 下載並讀取 PDF
     for i, pdf_url in enumerate(pdf_links):
         try:
             r = requests.get(pdf_url, timeout=10)
@@ -111,7 +109,6 @@ def generate_response_combined(task, keyword):
             with open(local_path, "wb") as f:
                 f.write(r.content)
             cleaned_paragraphs.extend(read_pdf(local_path))
-            pdf_links_collected.append(pdf_url)
         except Exception as e:
             cleaned_paragraphs.append(f"❌ 無法下載附件：{pdf_url}，錯誤：{e}")
 
@@ -146,12 +143,23 @@ def generate_response_combined(task, keyword):
             response_json = response.json()
             if "candidates" in response_json and len(response_json["candidates"]) > 0:
                 model_reply = response_json["candidates"][0]["content"]["parts"][0]["text"]
-                attachments_text = ""
-                if pdf_links_collected:
-                    attachments_text += "\n📎 附件下載：\n"
-                    for i, link in enumerate(pdf_links_collected, 1):
-                        attachments_text += f"- [附件{i}]({link})\n"
-                return model_reply + f"\n\n---\n🔗 [來源子頁面]({page_url})" + attachments_text
+
+                # 產生 PDF 附件連結（避免重複，並顯示檔名）
+                if pdf_links:
+                    seen = set()
+                    attachments = []
+                    for url in pdf_links:
+                        cleaned_url = url.replace(" ", "%20")
+                        if cleaned_url not in seen:
+                            seen.add(cleaned_url)
+                            filename = os.path.basename(cleaned_url)
+                            attachments.append(f"- [{filename}]({cleaned_url})")
+                    if attachments:
+                        attachment_text = "\n📎 附件下載：\n" + "\n".join(attachments)
+                        model_reply += attachment_text
+
+                model_reply += f"\n\n---\n🔗 [來源子頁面]({page_url})"
+                return model_reply
             else:
                 return "❌ 無法取得模型回答"
         else:
