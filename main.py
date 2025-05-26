@@ -99,8 +99,11 @@ def generate_response_combined(task, keyword):
     cleaned_paragraphs = clean_and_split_text(content_text)
 
     # 擷取 PDF
-    pdf_links = [urljoin(page_url, a["href"]) for a in soup.find_all("a", href=True) if a["href"].endswith(".pdf")]
+    all_links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".pdf")]
+    pdf_links = list({urljoin(page_url, link) for link in all_links})  # 去除重複
+    pdf_links = [re.sub(r' ', '%20', link) for link in pdf_links]      # 空白轉 %20
     pdf_links_collected = []
+
     for i, pdf_url in enumerate(pdf_links):
         try:
             r = requests.get(pdf_url, timeout=10)
@@ -148,7 +151,7 @@ def generate_response_combined(task, keyword):
                     attachments_text += "\n📎 附件下載：\n"
                     for i, link in enumerate(pdf_links_collected, 1):
                         attachments_text += f"- [附件{i}]({link})\n"
-                return model_reply + f"\n\n---\n🔗 [來源子頁面]({page_url})\n{attachments_text}"
+                return model_reply + f"\n\n---\n🔗 [來源子頁面]({page_url})" + attachments_text
             else:
                 return "❌ 無法取得模型回答"
         else:
