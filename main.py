@@ -4,15 +4,9 @@ import requests
 import torch
 import streamlit as st
 from sentence_transformers import SentenceTransformer, util
-from bs4 import BeautifulSoup
-from urllib.parse import urlparse
 import fitz  # PyMuPDF
-from tavily import TavilyClient
-
-# ====== 設定 API Key ======
-TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
 # ====== 頁面設定 ======
 st.set_page_config(page_title="🌿 綠園事務詢問欄", page_icon="🌱", layout="centered")
@@ -25,49 +19,77 @@ def load_model():
 
 model = load_model()
 
-# ====== 搜尋並下載最新 PDF 或擷取子頁內容 ======
-def search_and_process_content(keyword):
-    query = f"site:fg.tp.edu.tw {keyword}"
+# ====== 擷取最新消息中的子頁面 ======
+def fetch_latest_news_links(keyword):
+    base_url = "https://www.fg.tp.edu.tw"
+    news_url = f"{base_url}/category/news/news1/"
     try:
-        response = tavily_client.search(
-            query,
-            search_depth="advanced",
-            max_results=5,
-            sort_by="date"
-        )
+        response = requests.get(news_url, timeout=10)
+        response.raise_for_status()
     except Exception as e:
-        return f"❌ 搜尋服務錯誤：{e}"
+        return f"❌ 無法連接到最新消息頁面：{e}"
 
-    results = response.get("results", [])
-    subpages = [r for r in results if not urlparse(r['url']).netloc.endswith("fg.tp.edu.tw") or "/news/" in r["url"]]
+    soup = BeautifulSoup(response.text, "html.parser")
+    articles = soup.find_all("a", href=True)
 
-    if not subpages:
-        suggest_words = ["招生", "校內公告", "學生活動", "校規", "交換學生"]
-        suggestion = suggest_words[torch.randint(0, len(suggest_words), (1,)).item()]
-        return f"❌ 找不到符合「{keyword}」的子頁面，請嘗試其他關鍵字，例如：**{suggestion}**"
+    matched_links = []
+    for a in articles:
+        title = a.get_text(strip=True)
+        href = a["href"]
+        if keyword in title and href.startswith("/news/"):
+            full_url = urljoin(base_url, href)
+            matched_links.append(full_url)
 
-    top_url = subpages[0]['url']
+    if not matched_links:
+        return f"❌ 找不到符合「{keyword}」的子頁面，請嘗試其他關鍵字。"
+
+    return matched_links
+
+# ====== 擷取網頁文字內容 ======
+def extract_text_from_url(url):
     try:
-        page_resp = requests.get(top_url, timeout=10)
-        soup = BeautifulSoup(page_resp.text, 'html.parser')
-        page_text = soup.get_text()
-        page_text = re.sub(r"\s+", " ", page_text).strip()
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+    except Exception as e:
+        return f"❌ 無法連接到網頁：{e}"
 
-        pdf_links = [a['href'] for a in soup.find_all('a', href=True) if a['href'].endswith('.pdf')]
-        pdf_info = None
-        if pdf_links:
-            pdf_url = pdf_links[0] if pdf_links[0].startswith("http") else top_url.rsplit('/', 1)[0] + '/' + pdf_links[0]
-            pdf_response = requests.get(pdf_url)
-            safe_keyword = re.sub(r'[\\/*?:"<>|]', "_", keyword)
-            pdf_filename = os.path.join("downloads", f"{safe_keyword}_attached.pdf")
+    soup = BeautifulSoup(response.text, "html.parser")
+    content_div = soup.find("div", class_="entry-content")
+    if not content_div:
+        return "❌ 無法找到網頁內容。"
+
+    paragraphs = content_div.stripped_strings
+    return "\n".join(paragraphs)
+
+# ====== 下載並讀取 PDF 檔案 ======
+def download_and_read_pdfs(url):
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+    except Exception as e:
+        return [], f"❌ 無法連接到網頁：{e}"
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    pdf_links = soup.find_all("a", href=re.compile(r".*\.pdf$"))
+
+    texts = []
+    for link in pdf_links:
+        pdf_url = urljoin(url, link["href"])
+        try:
+            pdf_response = requests.get(pdf_url, timeout=10)
+            pdf_response.raise_for_status()
+            pdf_filename = os.path.join("downloads", os.path.basename(pdf_url))
             with open(pdf_filename, "wb") as f:
                 f.write(pdf_response.content)
-            pdf_info = {"path": pdf_filename, "url": pdf_url}
 
-        return {"url": top_url, "text": page_text, "pdf": pdf_info}
+            doc = fitz.open(pdf_filename)
+            for page in doc:
+                texts.append(page.get_text())
+            doc.close()
+        except Exception as e:
+            texts.append(f"❌ 無法下載或讀取 PDF：{e}")
 
-    except Exception as e:
-        return f"❌ 無法擷取子頁面內容：{e}"
+    return texts, None
 
 # ====== 清理文字 ======
 def clean_and_split_text(text):
@@ -76,24 +98,12 @@ def clean_and_split_text(text):
     paragraphs = re.split(r'(?<=[。！？])', text)
     return [p.strip() for p in paragraphs if len(p.strip()) > 10]
 
-# ====== 讀取 PDF ======
-def read_pdf(file_path):
-    try:
-        doc = fitz.Document(file_path)
-        all_paragraphs = []
-        for page in doc:
-            raw_text = page.get_text()
-            paragraphs = clean_and_split_text(raw_text)
-            all_paragraphs.extend(paragraphs)
-        return all_paragraphs
-    except Exception as e:
-        return [f"讀取 PDF 錯誤：{str(e)}"]
-
 # ====== 找到相關段落 ======
 def retrieve_relevant_content(task, paragraphs):
     paragraph_embeddings = model.encode(paragraphs, convert_to_tensor=True)
     query_embedding = model.encode(task, convert_to_tensor=True)
     scores = util.pytorch_cos_sim(query_embedding, paragraph_embeddings)[0]
+
     top_k = min(10, len(paragraphs))
     top_results = torch.topk(scores, k=top_k)
     return "\n".join([paragraphs[idx] for idx in top_results.indices])
@@ -103,68 +113,48 @@ def generate_response_combined(task, keyword):
     if not keyword.strip():
         return "❌ 請輸入關鍵字"
 
-    result = search_and_process_content(keyword)
-    if isinstance(result, str):
-        return result
+    links = fetch_latest_news_links(keyword)
+    if isinstance(links, str):
+        return links
 
-    paragraphs = clean_and_split_text(result["text"])
+    all_texts = []
+    for link in links:
+        page_text = extract_text_from_url(link)
+        pdf_texts, error = download_and_read_pdfs(link)
+        if error:
+            return error
+        all_texts.extend([page_text] + pdf_texts)
 
-    if result.get("pdf"):
-        pdf_paragraphs = read_pdf(result["pdf"]["path"])
-        if pdf_paragraphs and "錯誤" not in pdf_paragraphs[0]:
-            paragraphs.extend(pdf_paragraphs)
+    paragraphs = []
+    for text in all_texts:
+        paragraphs.extend(clean_and_split_text(text))
 
     if not paragraphs:
-        return "❌ 無法擷取任何文字內容，請嘗試其他關鍵字。"
+        return "❌ 找不到與問題相關的內容，請嘗試其他關鍵字。"
 
     relevant_content = retrieve_relevant_content(task, paragraphs)
     if not relevant_content.strip():
         return "❌ 找不到與問題相關的內容，請嘗試其他關鍵字。"
 
-    source_links = f"- [來源網頁]({result['url']})"
-    if result.get("pdf"):
-        source_links += f"\n- [附加PDF]({result['pdf']['url']})"
+    source_links = "\n".join([f"- [來源頁面]({link})" for link in links])
 
-    prompt = f"""
-你是一位了解北一女中行政流程與校內事務的輔導老師，請根據下方提供的內容協助回答問題，
-請使用繁體中文，以條列式或摘要方式簡潔表達。
+    response = f"""
+### 🔍 問題：{task}
 
-問題：{task}
-
-相關內容：
 {relevant_content}
 
-來源清單：
+---
+
+### 📄 來源頁面
 {source_links}
 """
-
-    api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": prompt}]}
-        ]
-    }
-
-    try:
-        response = requests.post(f"{api_url}?key={GEMINI_API_KEY}", json=payload, headers=headers)
-        if response.status_code == 200:
-            response_json = response.json()
-            if "candidates" in response_json and len(response_json["candidates"]) > 0:
-                model_reply = response_json["candidates"][0]["content"]["parts"][0]["text"]
-                return model_reply + "\n\n---\n### 📄 資料來源\n" + source_links
-            else:
-                return "❌ 無法取得模型回答"
-        else:
-            return f"❌ 錯誤：{response.status_code}, {response.text}"
-    except Exception as e:
-        return f"❌ 請求失敗：{e}"
+    return response
 
 # ====== Streamlit 介面 ======
 st.title("🌱 綠園事務詢問欄")
 
-task = st.text_input("輸入詢問事項", "例如：畢業典禮流程？")
-keyword = st.text_input("輸入關鍵字（自動搜尋北一女網站）", "例如：畢業典禮")
+task = st.text_input("輸入詢問事項", "例如：如何申請交換學生？")
+keyword = st.text_input("輸入關鍵字（自動搜尋北一女最新消息）", "例如：畢業典禮")
 
 if st.button("生成回答"):
     with st.spinner('正在處理...'):
