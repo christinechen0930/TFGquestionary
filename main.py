@@ -100,6 +100,7 @@ def generate_response_combined(task, keyword):
 
     # 擷取 PDF
     pdf_links = [urljoin(page_url, a["href"]) for a in soup.find_all("a", href=True) if a["href"].endswith(".pdf")]
+    pdf_links_collected = []
     for i, pdf_url in enumerate(pdf_links):
         try:
             r = requests.get(pdf_url, timeout=10)
@@ -107,6 +108,7 @@ def generate_response_combined(task, keyword):
             with open(local_path, "wb") as f:
                 f.write(r.content)
             cleaned_paragraphs.extend(read_pdf(local_path))
+            pdf_links_collected.append(pdf_url)
         except Exception as e:
             cleaned_paragraphs.append(f"❌ 無法下載附件：{pdf_url}，錯誤：{e}")
 
@@ -141,7 +143,12 @@ def generate_response_combined(task, keyword):
             response_json = response.json()
             if "candidates" in response_json and len(response_json["candidates"]) > 0:
                 model_reply = response_json["candidates"][0]["content"]["parts"][0]["text"]
-                return model_reply + f"\n\n---\n🔗 [來源子頁面]({page_url})"
+                attachments_text = ""
+                if pdf_links_collected:
+                    attachments_text += "\n📎 附件下載：\n"
+                    for i, link in enumerate(pdf_links_collected, 1):
+                        attachments_text += f"- [附件{i}]({link})\n"
+                return model_reply + f"\n\n---\n🔗 [來源子頁面]({page_url})\n{attachments_text}"
             else:
                 return "❌ 無法取得模型回答"
         else:
