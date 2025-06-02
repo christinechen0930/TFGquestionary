@@ -4,7 +4,7 @@ import requests
 import torch
 import streamlit as st
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from urllib.parse import urljoin, unquote, urlparse
 from sentence_transformers import SentenceTransformer, util
 import fitz  # PyMuPDF
 
@@ -67,7 +67,7 @@ def fetch_relevant_news_page(keyword):
     if not matched_pages:
         return f"❌ 找不到符合「{keyword}」的子頁面，請嘗試其他關鍵字。"
 
-    return matched_pages[0]  # 最新一筆子頁面網址
+    return matched_pages[0]
 
 # ====== 找到相關段落 ======
 def retrieve_relevant_content(task, paragraphs):
@@ -78,6 +78,11 @@ def retrieve_relevant_content(task, paragraphs):
     top_k = min(10, len(paragraphs))
     top_results = torch.topk(scores, k=top_k)
     return "\n".join([paragraphs[idx] for idx in top_results.indices])
+
+# ====== 從 URL 解析出原始檔名 ======
+def get_filename_from_url(url):
+    path = urlparse(url).path
+    return unquote(os.path.basename(path)).replace(" ", "_")
 
 # ====== 整合回答 ======
 def generate_response_combined(task, keyword):
@@ -100,18 +105,18 @@ def generate_response_combined(task, keyword):
 
     # 擷取 PDF
     all_links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".pdf")]
-    pdf_links = list({urljoin(page_url, link) for link in all_links})  # 去除重複
-    pdf_links = [re.sub(r' ', '%20', link) for link in pdf_links]      # 空白轉 %20
+    pdf_links = list({urljoin(page_url, link.replace(" ", "%20")) for link in all_links})  # 去除重複
     pdf_links_collected = []
 
-    for i, pdf_url in enumerate(pdf_links):
+    for pdf_url in pdf_links:
         try:
+            file_name = get_filename_from_url(pdf_url)
+            local_path = os.path.join("downloads", file_name)
             r = requests.get(pdf_url, timeout=10)
-            local_path = os.path.join("downloads", f"attached_{i}.pdf")
             with open(local_path, "wb") as f:
                 f.write(r.content)
             cleaned_paragraphs.extend(read_pdf(local_path))
-            pdf_links_collected.append(pdf_url)
+            pdf_links_collected.append((file_name, pdf_url))
         except Exception as e:
             cleaned_paragraphs.append(f"❌ 無法下載附件：{pdf_url}，錯誤：{e}")
 
@@ -149,8 +154,8 @@ def generate_response_combined(task, keyword):
                 attachments_text = ""
                 if pdf_links_collected:
                     attachments_text += "\n📎 附件下載：\n"
-                    for i, link in enumerate(pdf_links_collected, 1):
-                        attachments_text += f"- [附件{i}]({link})\n"
+                    for name, link in pdf_links_collected:
+                        attachments_text += f"- [{name}]({link})\n"
                 return model_reply + f"\n\n---\n🔗 [來源子頁面]({page_url})" + attachments_text
             else:
                 return "❌ 無法取得模型回答"
