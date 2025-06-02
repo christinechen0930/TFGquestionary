@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>北一女中問答集</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", sans-serif;
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+      color: #2c7a7b;
+    }
+    .question-box {
+      background-color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .options {
+      margin-top: 10px;
+    }
+    .options button {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      background-color: #edf2f7;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .options button:hover {
+      background-color: #c6f6d5;
+    }
+    .correct {
+      background-color: #9ae6b4 !important;
+    }
+    .wrong {
+      background-color: #feb2b2 !important;
+    }
+    .score {
+      font-size: 20px;
+      text-align: center;
+      margin-top: 30px;
+      color: #2c5282;
+    }
+    select {
+      font-size: 16px;
+      padding: 8px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📚 北一女中問答集</h1>
+  <label for="theme">選擇主題：</label>
+  <select id="theme" onchange="loadQuestions()">
+    <option value="服裝">服裝</option>
+    <option value="飲食">飲食</option>
+    <option value="校舍">校舍</option>
+  </select>
+
+  <div id="quiz-container"></div>
+  <div class="score" id="score-board"></div>
+
+  <script>
+    const questionBank = {
+      "服裝": [
+        {
+          question: "北一女中制服的冬季上衣主要是什麼顏色？",
+          options: ["白色", "綠色", "黑色", "藍色"],
+          answer: "綠色"
+        },
+        {
+          question: "北一女中運動服上衣顏色是？",
+          options: ["綠色", "白色", "灰色", "黃色"],
+          answer: "白色"
+        }
+      ],
+      "飲食": [
+        {
+          question: "北一女中最有名的餐點是什麼？",
+          options: ["滷肉飯", "雞腿便當", "三明治", "豆花"],
+          answer: "雞腿便當"
+        }
+      ],
+      "校舍": [
+        {
+          question: "北一女中的大禮堂名稱是什麼？",
+          options: ["中山堂", "懷恩堂", "翠谷廳", "光復堂"],
+          answer: "翠谷廳"
+        }
+      ]
+    };
+
+    let currentScore = 0;
+    let totalQuestions = 0;
+
+    function loadQuestions() {
+      const theme = document.getElementById("theme").value;
+      const quizContainer = document.getElementById("quiz-container");
+      const scoreBoard = document.getElementById("score-board");
+      quizContainer.innerHTML = "";
+      scoreBoard.innerHTML = "";
+      currentScore = 0;
+
+      const questions = questionBank[theme];
+      totalQuestions = questions.length;
+
+      questions.forEach((q, index) => {
+        const box = document.createElement("div");
+        box.className = "question-box";
+
+        const qText = document.createElement("h3");
+        qText.innerText = `第 ${index + 1} 題：${q.question}`;
+        box.appendChild(qText);
+
+        const optionContainer = document.createElement("div");
+        optionContainer.className = "options";
+
+        q.options.forEach(option => {
+          const btn = document.createElement("button");
+          btn.innerText = option;
+          btn.onclick = () => {
+            if (btn.disabled) return;
+            const allButtons = optionContainer.querySelectorAll("button");
+            allButtons.forEach(b => b.disabled = true);
+
+            if (option === q.answer) {
+              btn.classList.add("correct");
+              currentScore++;
+            } else {
+              btn.classList.add("wrong");
+              allButtons.forEach(b => {
+                if (b.innerText === q.answer) {
+                  b.classList.add("correct");
+                }
+              });
+            }
+
+            if (index === questions.length - 1) {
+              scoreBoard.innerHTML = `🎉 你答對了 ${currentScore} / ${totalQuestions} 題！`;
+            }
+          };
+          optionContainer.appendChild(btn);
+        });
+
+        box.appendChild(optionContainer);
+        quizContainer.appendChild(box);
+      });
+    }
+
+    window.onload = loadQuestions;
+  </script>
+</body>
+</html>
