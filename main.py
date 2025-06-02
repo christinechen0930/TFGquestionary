@@ -180,33 +180,33 @@ st.markdown("---")
 
 st.markdown("""
 <style>
-.custom-button-container {
+.button-container {
     display: flex;
     justify-content: flex-start;
-    gap: 12px;
-    margin-top: 10px;
+    gap: 0.5rem;
+    margin-top: 1rem;
 }
 
-.custom-button {
+a.fake-button {
     background-color: #f0f2f6;
-    border: none;
-    color: #262730;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
+    color: black;
+    padding: 0.4rem 1rem;
     text-decoration: none;
+    border-radius: 0.5rem;
+    border: 1px solid #d3d3d3;
+    font-weight: 500;
+    font-size: 1rem;
     display: inline-block;
+    transition: background-color 0.2s ease;
 }
 
-.custom-button:hover {
+a.fake-button:hover {
     background-color: #e0e0e0;
 }
 </style>
 
-<div class="custom-button-container">
-    <a href="https://your-qa-page-url.com" target="_blank" class="custom-button">🔍 前往北一女中問答集</a>
-    <a href="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank" class="custom-button">📜 瞭解北一女校史</a>
+<div class="button-container">
+    <a href="https://your-qa-page-url.com" target="_blank" class="fake-button">🔍 前往北一女中問答集</a>
+    <a href="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank" class="fake-button">📜 瞭解北一女校史</a>
 </div>
 """, unsafe_allow_html=True)
