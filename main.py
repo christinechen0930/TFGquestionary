@@ -178,7 +178,7 @@ if st.button("生成回答"):
 
 st.markdown("---")
 
-col1, spacer, col2 = st.columns([1, 0.2, 1])
+col1, spacer, col2 = st.columns([1, -0.5 , 1])
 
 with col1:
     if st.button("🔍 前往北一女中問答集"):
