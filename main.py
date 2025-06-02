@@ -177,6 +177,15 @@ if st.button("生成回答"):
         st.markdown(response)
 
 st.markdown("---")
-if st.button("瞭解北一女校史"):
-    js = "window.open('https://christinechen0930.github.io/TFGquestionary/TFGhistory.html')"
-    st.components.v1.html(f"<script>{js}</script>", height=0, width=0)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("🔍 前往北一女中問答集"):
+        js = "window.open('https://your-qa-page-url.com')"  # <- 替換成你的問答集網址
+        st.components.v1.html(f"<script>{js}</script>", height=0)
+
+with col2:
+    if st.button("📜 瞭解北一女校史"):
+        js = "window.open('https://christinechen0930.github.io/TFGquestionary/TFGhistory.html')"
+        st.components.v1.html(f"<script>{js}</script>", height=0)
