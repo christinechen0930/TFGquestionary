@@ -6,147 +6,132 @@
   <title>北一女中問答集</title>
   <style>
     body {
-      font-family: 'Microsoft JhengHei', sans-serif;
-      margin: 30px;
-      background-color: #f4f4f4;
+      font-family: "Noto Sans TC", sans-serif;
+      margin: 40px;
+      background-color: #f0f8f7;
+      color: #333;
     }
-    h1, h2 {
-      color: #2f4f4f;
+    h1 {
+      color: #22775e;
     }
-    .btn-group button {
-      background-color: #98d3b6;
+    button {
+      background-color: #22775e;
+      color: white;
       border: none;
       padding: 10px 20px;
-      margin: 5px;
-      font-size: 16px;
+      margin: 10px 5px 20px 0;
+      border-radius: 5px;
       cursor: pointer;
-      border-radius: 8px;
+      font-size: 1rem;
     }
-    .btn-group button:hover {
-      background-color: #77b79e;
+    button:hover {
+      background-color: #1a5d4d;
     }
     .question {
-      background-color: white;
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 20px;
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #ffffff;
+      border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .option {
+    .options label {
       display: block;
-      margin: 10px 0;
-    }
-    #submitBtn {
-      background-color: #4CAF50;
-      color: white;
-      padding: 12px 24px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
+      margin: 8px 0;
       cursor: pointer;
     }
-    #result {
-      font-weight: bold;
-      margin-top: 20px;
+    .topic-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 30px;
     }
   </style>
 </head>
 <body>
-
   <h1>北一女中問答集</h1>
-  <h2>請選擇一個主題：</h2>
-  <div class="btn-group">
-    <button onclick="loadQuiz('服裝')">服裝</button>
-    <button onclick="loadQuiz('飲食')">飲食</button>
-    <button onclick="loadQuiz('校舍')">校舍</button>
+
+  <div class="topic-btns">
+    <button onclick="loadTopic('服裝')">服裝</button>
+    <button onclick="loadTopic('飲食')">飲食</button>
+    <button onclick="loadTopic('校舍')">校舍</button>
   </div>
 
   <div id="quiz-container"></div>
-  <button id="submitBtn" onclick="checkAnswers()" style="display:none;">提交答案</button>
-  <div id="result"></div>
 
   <script>
-    const quizzes = {
+    const questions = {
       "服裝": [
         {
-          question: "制服上衣是什麼顏色的？",
+          q: "制服上衣是什麼顏色的？",
           options: ["黃色", "白色", "綠色", "藍色"],
-          answer: "綠色"
+          answer: 2
         },
         {
-          question: "運動服上衣是什麼顏色的？",
+          q: "運動服上衣是什麼顏色的？",
           options: ["黃色", "白色", "綠色", "藍色"],
-          answer: "白色"
+          answer: 1
         },
         {
-          question: "萬聖節可以穿什麼服裝？",
+          q: "萬聖節可以穿什麼服裝？",
           options: ["友校制服", "南瓜服裝", "北一制服", "以上皆是"],
-          answer: "以上皆是"
+          answer: 3
         }
       ],
       "飲食": [
         {
-          question: "北一女中學生的午餐來源不會是哪一個？",
+          q: "北一女中學生的午餐來源不會是哪一個？",
           options: ["大小熱", "訂外送", "帶便當", "出校吃"],
-          answer: "出校吃"
+          answer: 3
         },
         {
-          question: "小熱的薯不辣是什麼食物？",
+          q: "小熱的薯不辣是什麼食物？",
           options: ["薯條+甜不辣", "脆薯+甜不辣", "不辣的薯條", "不辣的脆薯"],
-          answer: "薯條+甜不辣"
+          answer: 0
         },
         {
-          question: "大熱近兩年沒有賣過什麼品項？",
+          q: "大熱近兩年沒有賣過什麼品項？",
           options: ["糖葫蘆", "仙草蜜", "鹽酥雞", "芒果冰"],
-          answer: "鹽酥雞"
+          answer: 2
         }
       ],
       "校舍": [
         {
-          question: "北一女中哪一棟樓是古蹟？",
+          q: "北一女中哪一棟樓是古蹟？",
           options: ["至善樓", "光復樓", "學珠樓", "仁愛樓"],
-          answer: "光復樓"
+          answer: 1
         },
         {
-          question: "北一女中哪一棟樓是以歷任校長的名字命名？",
+          q: "北一女中哪一棟樓是以歷任校長的名字命名？",
           options: ["至善樓", "光復樓", "學珠樓", "仁愛樓"],
-          answer: "學珠樓"
+          answer: 2
         },
         {
-          question: "下列哪一棟樓不在北一女中？",
+          q: "下列哪一棟樓不在北一女中？",
           options: ["至善樓", "光復樓", "學珠樓", "仁愛樓"],
-          answer: "仁愛樓"
+          answer: 3
         }
       ]
     };
 
-    let currentQuiz = [];
-
-    function loadQuiz(topic) {
-      currentQuiz = quizzes[topic];
-      const container = document.getElementById('quiz-container');
-      container.innerHTML = `<h2>主題：${topic}</h2>`;
-      currentQuiz.forEach((q, i) => {
-        const optionsHtml = q.options.map(opt =>
-          `<label class="option"><input type="radio" name="q${i}" value="${opt}"> ${opt}</label>`
-        ).join("");
-        container.innerHTML += `<div class="question"><p>${i + 1}. ${q.question}</p>${optionsHtml}</div>`;
+    function loadTopic(topic) {
+      const container = document.getElementById("quiz-container");
+      container.innerHTML = `<h2>${topic} 主題題目</h2>`;
+      questions[topic].forEach((q, index) => {
+        const qDiv = document.createElement("div");
+        qDiv.className = "question";
+        qDiv.innerHTML = `<p><strong>Q${index + 1}. ${q.q}</strong></p>`;
+        const optsDiv = document.createElement("div");
+        optsDiv.className = "options";
+        q.options.forEach((opt, i) => {
+          const id = `q${index}_opt${i}`;
+          optsDiv.innerHTML += `
+            <label><input type="radio" name="q${index}" id="${id}"/> ${opt}</label>
+          `;
+        });
+        qDiv.appendChild(optsDiv);
+        container.appendChild(qDiv);
       });
-      document.getElementById("submitBtn").style.display = "inline-block";
-      document.getElementById("result").innerHTML = "";
-    }
-
-    function checkAnswers() {
-      let correct = 0;
-      currentQuiz.forEach((q, i) => {
-        const selected = document.querySelector(`input[name="q${i}"]:checked`);
-        if (selected && selected.value === q.answer) {
-          correct++;
-        }
-      });
-      document.getElementById("result").innerText = `你答對了 ${correct} / ${currentQuiz.length} 題`;
     }
   </script>
-
 </body>
 </html>
