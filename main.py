@@ -178,27 +178,35 @@ if st.button("生成回答"):
 
 st.markdown("---")
 
-# 自訂按鈕樣式與排版
 st.markdown("""
 <style>
-.button-container {
+.custom-button-container {
     display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin-top: 20px;
+    justify-content: flex-start;
+    gap: 12px;
+    margin-top: 10px;
 }
-button {
-    font-size: 16px;
-    padding: 10px 20px;
+
+.custom-button {
+    background-color: #f0f2f6;
+    border: none;
+    color: #262730;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.custom-button:hover {
+    background-color: #e0e0e0;
 }
 </style>
 
-<div class="button-container">
-    <form action="https://your-qa-page-url.com" target="_blank">
-        <button type="submit">🔍 前往北一女中問答集</button>
-    </form>
-    <form action="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank">
-        <button type="submit">📜 瞭解北一女校史</button>
-    </form>
+<div class="custom-button-container">
+    <a href="https://your-qa-page-url.com" target="_blank" class="custom-button">🔍 前往北一女中問答集</a>
+    <a href="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank" class="custom-button">📜 瞭解北一女校史</a>
 </div>
 """, unsafe_allow_html=True)
