@@ -178,14 +178,27 @@ if st.button("生成回答"):
 
 st.markdown("---")
 
-col1, spacer, col2 = st.columns([1, -0.5 , 1])
+# 自訂按鈕樣式與排版
+st.markdown("""
+<style>
+.button-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+button {
+    font-size: 16px;
+    padding: 10px 20px;
+}
+</style>
 
-with col1:
-    if st.button("🔍 前往北一女中問答集"):
-        js = "window.open('https://your-qa-page-url.com')"  # 換成你實際的網址
-        st.components.v1.html(f"<script>{js}</script>", height=0)
-
-with col2:
-    if st.button("📜 瞭解北一女校史"):
-        js = "window.open('https://christinechen0930.github.io/TFGquestionary/TFGhistory.html')"
-        st.components.v1.html(f"<script>{js}</script>", height=0)
+<div class="button-container">
+    <form action="https://your-qa-page-url.com" target="_blank">
+        <button type="submit">🔍 前往北一女中問答集</button>
+    </form>
+    <form action="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank">
+        <button type="submit">📜 瞭解北一女校史</button>
+    </form>
+</div>
+""", unsafe_allow_html=True)
