@@ -178,11 +178,11 @@ if st.button("生成回答"):
 
 st.markdown("---")
 
-col1, col2 = st.columns(2)
+col1, spacer, col2 = st.columns([1, 0.2, 1])
 
 with col1:
     if st.button("🔍 前往北一女中問答集"):
-        js = "window.open('https://your-qa-page-url.com')"  # <- 替換成你的問答集網址
+        js = "window.open('https://your-qa-page-url.com')"  # 換成你實際的網址
         st.components.v1.html(f"<script>{js}</script>", height=0)
 
 with col2:
