@@ -2,208 +2,177 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>北一女中問答集</title>
   <style>
     body {
-      font-family: "Noto Sans TC", sans-serif;
-      max-width: 800px;
-      margin: auto;
-      padding: 20px;
-      background-color: #f9f9f9;
-    }
-    h1 {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
       text-align: center;
-      color: #2c7a7b;
-    }
-    .question-box {
-      background-color: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       padding: 20px;
-      margin-top: 20px;
     }
-    .options {
-      margin-top: 10px;
-    }
-    .options button {
-      display: block;
-      width: 100%;
-      margin: 5px 0;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      background-color: #edf2f7;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    .options button:hover {
-      background-color: #c6f6d5;
-    }
-    .correct {
-      background-color: #9ae6b4 !important;
-    }
-    .wrong {
-      background-color: #feb2b2 !important;
-    }
-    .score {
-      font-size: 20px;
-      text-align: center;
-      margin-top: 30px;
-      color: #2c5282;
-    }
-    select {
-      font-size: 16px;
-      padding: 8px;
+    #question {
+      font-size: 1.5em;
       margin-bottom: 20px;
     }
-    .explanation {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #4a5568;
+    .option-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    .correct {
+      background-color: #c8e6c9;
+    }
+    .wrong {
+      background-color: #ffcdd2;
+    }
+    #score {
+      font-size: 1.2em;
+      margin-top: 20px;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+    .modal-content {
+      background-color: #e0f2f1;
+      margin: 15% auto;
+      padding: 20px;
+      border: 4px double #66bb6a;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 400px;
+      text-align: left;
+      position: relative;
+    }
+    .close {
+      color: #333;
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>📚 北一女中問答集</h1>
-  <label for="theme">選擇主題：</label>
-  <select id="theme" onchange="loadQuestions()">
-    <option value="服裝">服裝</option>
-    <option value="飲食">飲食</option>
-    <option value="校舍">校舍</option>
-  </select>
+  <h1>北一女中問答集</h1>
+  <div id="question"></div>
+  <div class="option-container" id="options"></div>
+  <div id="score"></div>
 
-  <div id="quiz-container"></div>
-  <div class="score" id="score-board"></div>
+  <!-- Modal -->
+  <div id="explanationModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeModal">&times;</span>
+      <p id="explanationText"></p>
+    </div>
+  </div>
 
   <script>
-    const questionBank = {
-      "服裝": [
-        {
-          question: "制服上衣是什麼顏色的？",
-          options: ["黃色", "白色", "綠色", "藍色"],
-          answer: "綠色",
-          explanation: "北一的經典綠上衣，是北一女學生被稱為小綠綠的原因～"
-        },
-        {
-          question: "運動服上衣是什麼顏色的？",
-          options: ["黃色", "白色", "綠色", "藍色"],
-          answer: "白色",
-          explanation: "運動服以白色為主，清爽好動，活力滿滿！"
-        },
-        {
-          question: "萬聖節可以穿什麼服裝？",
-          options: ["友校制服", "南瓜服裝", "北一制服", "以上皆是"],
-          answer: "以上皆是",
-          explanation: "北一的萬聖節很狂，什麼都能穿，想變誰就變誰！\n（入校時記得出示學生證或者校務行政系統照片）"
-        }
-      ],
-      "飲食": [
-        {
-          question: "北一女中學生的午餐來源不會是哪一個？",
-          options: ["大小熱", "訂外送", "帶便當", "出校吃"],
-          answer: "出校吃",
-          explanation: "校規不開放出校買飯，只能靠大小熱、外送或自備便當啦～\n（如果需要出校領取外送，記得要穿校服並攜帶學生證，在校門口換外出證。）"
-        },
-        {
-          question: "小熱的薯不辣是什麼食物？",
-          options: ["薯條+甜不辣", "脆薯+甜不辣", "不辣的薯條", "不辣的脆薯"],
-          answer: "薯條+甜不辣",
-          explanation: "薯不辣是小熱傳奇美食，薯條加甜不辣的完美組合～"
-        },
-        {
-          question: "大熱近兩年沒有賣過什麼品項？",
-          options: ["糖葫蘆", "仙草蜜", "鹽酥雞", "芒果冰"],
-          answer: "鹽酥雞",
-          explanation: "雖然很多人許願過，但鹽酥雞在大熱就是沒出現過（哭）"
-        }
-      ],
-      "校舍": [
-        {
-          question: "北一女中哪一棟樓是古蹟？",
-          options: ["至善樓", "光復樓", "學珠樓", "仁愛樓"],
-          answer: "光復樓",
-          explanation: "光復樓是北一的歷史見證，身為古蹟真的很有氣質～"
-        },
-        {
-          question: "北一女中哪一棟樓是以歷任校長的名字命名？",
-          options: ["至善樓", "光復樓", "學珠樓", "仁愛樓"],
-          answer: "學珠樓",
-          explanation: "學珠樓是以江學珠校長名字來命名，紀念他對北一女中的付出與貢獻。"
-        },
-        {
-          question: "下列哪一棟樓不在北一女中？",
-          options: ["至善樓", "光復樓", "學珠樓", "仁愛樓"],
-          answer: "仁愛樓",
-          explanation: "仁愛樓不在北一啦！可能在你心裡？"
-        }
-      ]
-    };
+    const questions = [
+      {
+        question: "北一女的制服主要是什麼顏色？",
+        options: ["藍色", "白色", "綠色", "紅色"],
+        answer: "綠色",
+        explanation: "北一女的制服以綠色為主，因此常被稱為「小綠綠」。"
+      },
+      {
+        question: "北一女中在哪一年創立？",
+        options: ["1904年", "1911年", "1945年", "1967年"],
+        answer: "1904年",
+        explanation: "北一女中創立於1904年，原名為臺北第一高等女學校。"
+      },
+      {
+        question: "北一女中著名的樂旗隊名稱是什麼？",
+        options: ["綠光旗隊", "儀隊", "風之少女", "小綠隊"],
+        answer: "儀隊",
+        explanation: "北一女的儀隊是全台知名，常在各大典禮中表演。"
+      }
+    ];
 
     let currentScore = 0;
-    let totalQuestions = 0;
+    let index = 0;
 
-    function loadQuestions() {
-      const theme = document.getElementById("theme").value;
-      const quizContainer = document.getElementById("quiz-container");
-      const scoreBoard = document.getElementById("score-board");
-      quizContainer.innerHTML = "";
-      scoreBoard.innerHTML = "";
-      currentScore = 0;
+    const questionElement = document.getElementById("question");
+    const optionContainer = document.getElementById("options");
+    const scoreBoard = document.getElementById("score");
+    const modal = document.getElementById("explanationModal");
+    const explanationText = document.getElementById("explanationText");
+    const closeModal = document.getElementById("closeModal");
 
-      const questions = questionBank[theme];
-      totalQuestions = questions.length;
+    function showQuestion() {
+      const q = questions[index];
+      questionElement.textContent = q.question;
+      optionContainer.innerHTML = "";
 
-      questions.forEach((q, index) => {
-        const box = document.createElement("div");
-        box.className = "question-box";
+      q.options.forEach(option => {
+        const btn = document.createElement("button");
+        btn.textContent = option;
+        btn.onclick = () => {
+          if (btn.disabled) return;
+          const allButtons = optionContainer.querySelectorAll("button");
+          allButtons.forEach(b => b.disabled = true);
 
-        const qText = document.createElement("h3");
-        qText.innerText = `第 ${index + 1} 題：${q.question}`;
-        box.appendChild(qText);
+          if (option === q.answer) {
+            btn.classList.add("correct");
+            currentScore++;
+            explanationText.textContent = "✅ 答對了！\n\n" + q.explanation;
+          } else {
+            btn.classList.add("wrong");
+            allButtons.forEach(b => {
+              if (b.innerText === q.answer) {
+                b.classList.add("correct");
+              }
+            });
+            explanationText.textContent = "❌ 答錯了！\n\n" + q.explanation;
+          }
 
-        const optionContainer = document.createElement("div");
-        optionContainer.className = "options";
+          modal.style.display = "block";
 
-        q.options.forEach(option => {
-          const btn = document.createElement("button");
-          btn.innerText = option;
-          btn.onclick = () => {
-            if (btn.disabled) return;
-            const allButtons = optionContainer.querySelectorAll("button");
-            allButtons.forEach(b => b.disabled = true);
-
-            const exp = document.createElement("div");
-            exp.className = "explanation";
-            exp.innerText = q.explanation;
-
-            if (option === q.answer) {
-              btn.classList.add("correct");
-              currentScore++;
-            } else {
-              btn.classList.add("wrong");
-              allButtons.forEach(b => {
-                if (b.innerText === q.answer) {
-                  b.classList.add("correct");
-                }
-              });
-            }
-
-            box.appendChild(exp);
-
-            if (index === questions.length - 1) {
-              scoreBoard.innerHTML = `🎉 你答對了 ${currentScore} / ${totalQuestions} 題！`;
-            }
-          };
-          optionContainer.appendChild(btn);
-        });
-
-        box.appendChild(optionContainer);
-        quizContainer.appendChild(box);
+          if (index === questions.length - 1) {
+            scoreBoard.innerHTML = `🎉 你答對了 ${currentScore} / ${questions.length} 題！`;
+          }
+        };
+        optionContainer.appendChild(btn);
       });
     }
 
-    window.onload = loadQuestions;
+    closeModal.onclick = () => {
+      modal.style.display = "none";
+      index++;
+      if (index < questions.length) {
+        showQuestion();
+      }
+    };
+
+    window.onclick = (event) => {
+      if (event.target === modal) {
+        modal.style.display = "none";
+        index++;
+        if (index < questions.length) {
+          showQuestion();
+        }
+      }
+    };
+
+    showQuestion();
   </script>
 </body>
 </html>
