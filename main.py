@@ -206,7 +206,7 @@ a.fake-button:hover {
 </style>
 
 <div class="button-container">
-    <a href="https://your-qa-page-url.com" target="_blank" class="fake-button">🔍 前往北一女中問答集</a>
+    <a href="https://christinechen0930.github.io/TFGquestionary/TFGQA.html" target="_blank" class="fake-button">🔍 前往北一女中問答集</a>
     <a href="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank" class="fake-button">📜 瞭解北一女校史</a>
 </div>
 """, unsafe_allow_html=True)
