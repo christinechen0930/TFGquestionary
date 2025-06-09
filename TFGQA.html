@@ -57,6 +57,11 @@
       padding: 8px;
       margin-bottom: 20px;
     }
+    .explanation {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #4a5568;
+    }
   </style>
 </head>
 <body>
@@ -135,7 +140,6 @@
       ]
     };
 
-
     let currentScore = 0;
     let totalQuestions = 0;
 
@@ -169,6 +173,10 @@
             const allButtons = optionContainer.querySelectorAll("button");
             allButtons.forEach(b => b.disabled = true);
 
+            const exp = document.createElement("div");
+            exp.className = "explanation";
+            exp.innerText = q.explanation;
+
             if (option === q.answer) {
               btn.classList.add("correct");
               currentScore++;
@@ -180,6 +188,8 @@
                 }
               });
             }
+
+            box.appendChild(exp);
 
             if (index === questions.length - 1) {
               scoreBoard.innerHTML = `🎉 你答對了 ${currentScore} / ${totalQuestions} 題！`;
