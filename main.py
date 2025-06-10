@@ -1,3 +1,5 @@
+# 🟢 核心：若找不到頁面，仍會用知識庫作答！
+
 import os
 import re
 import requests
@@ -50,31 +52,27 @@ def fetch_relevant_news_page(keyword):
     try:
         res = requests.get(news_url, timeout=10)
         res.raise_for_status()
-    except Exception as e:
-        return f"❌ 無法連接到最新消息頁面：{e}"
+    except Exception:
+        return None  # ❗ 改為回傳 None，不終止流程
 
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.find_all("a", href=True)
 
-    matched_pages = []
     for link in links:
         title = link.get_text(strip=True)
         href = link["href"]
         if keyword in title and "/news/" in href:
-            full_url = urljoin(base_url, href)
-            matched_pages.append(full_url)
+            return urljoin(base_url, href)
 
-    if not matched_pages:
-        return f"❌ 找不到符合「{keyword}」的子頁面，請嘗試其他關鍵字。"
-
-    return matched_pages[0]
+    return None  # ❗ 沒找到就回 None
 
 # ====== 找到相關段落 ======
 def retrieve_relevant_content(task, paragraphs):
+    if not paragraphs:
+        return ""
     paragraph_embeddings = model.encode(paragraphs, convert_to_tensor=True)
     query_embedding = model.encode(task, convert_to_tensor=True)
     scores = util.pytorch_cos_sim(query_embedding, paragraph_embeddings)[0]
-
     top_k = min(10, len(paragraphs))
     top_results = torch.topk(scores, k=top_k)
     return "\n".join([paragraphs[idx] for idx in top_results.indices])
@@ -84,45 +82,45 @@ def get_filename_from_url(url):
     path = urlparse(url).path
     return unquote(os.path.basename(path)).replace(" ", "_")
 
-# ====== 整合回答 ======
+# ====== 整合回答邏輯 ======
 def generate_response_combined(task, keyword):
-    if not keyword.strip():
-        return "❌ 請輸入關鍵字"
-
-    page_url = fetch_relevant_news_page(keyword)
-    if isinstance(page_url, str) and page_url.startswith("❌"):
-        return page_url
-
-    try:
-        res = requests.get(page_url, timeout=10)
-        res.raise_for_status()
-    except Exception as e:
-        return f"❌ 無法讀取子頁面內容：{e}"
-
-    soup = BeautifulSoup(res.text, "html.parser")
-    content_text = soup.get_text()
-    cleaned_paragraphs = clean_and_split_text(content_text)
-
-    # 擷取 PDF
-    all_links = [a["href"] for a in soup.find_all("a", href=True) if a["href"].endswith(".pdf")]
-    pdf_links = list({urljoin(page_url, link.replace(" ", "%20")) for link in all_links})  # 去除重複
+    cleaned_paragraphs = []
     pdf_links_collected = []
+    page_url = None
 
-    for pdf_url in pdf_links:
-        try:
-            file_name = get_filename_from_url(pdf_url)
-            local_path = os.path.join("downloads", file_name)
-            r = requests.get(pdf_url, timeout=10)
-            with open(local_path, "wb") as f:
-                f.write(r.content)
-            cleaned_paragraphs.extend(read_pdf(local_path))
-            pdf_links_collected.append((file_name, pdf_url))
-        except Exception as e:
-            cleaned_paragraphs.append(f"❌ 無法下載附件：{pdf_url}，錯誤：{e}")
+    if keyword.strip():
+        page_url = fetch_relevant_news_page(keyword)
+        if page_url:
+            try:
+                res = requests.get(page_url, timeout=10)
+                res.raise_for_status()
+                soup = BeautifulSoup(res.text, "html.parser")
+                content_text = soup.get_text()
+                cleaned_paragraphs.extend(clean_and_split_text(content_text))
 
+                # 擷取 PDF
+                pdf_links = {
+                    urljoin(page_url, a["href"].replace(" ", "%20"))
+                    for a in soup.find_all("a", href=True)
+                    if a["href"].endswith(".pdf")
+                }
+
+                for pdf_url in pdf_links:
+                    try:
+                        file_name = get_filename_from_url(pdf_url)
+                        local_path = os.path.join("downloads", file_name)
+                        r = requests.get(pdf_url, timeout=10)
+                        with open(local_path, "wb") as f:
+                            f.write(r.content)
+                        cleaned_paragraphs.extend(read_pdf(local_path))
+                        pdf_links_collected.append((file_name, pdf_url))
+                    except Exception as e:
+                        cleaned_paragraphs.append(f"❌ 無法下載附件：{pdf_url}，錯誤：{e}")
+            except Exception as e:
+                cleaned_paragraphs.append(f"❌ 無法讀取子頁面內容：{e}")
+
+    # 🔍 不管有沒有找到網頁，都要繼續處理
     relevant_content = retrieve_relevant_content(task, cleaned_paragraphs)
-    if not relevant_content.strip():
-        return "❌ 找不到與問題相關的內容，請嘗試其他關鍵字。"
 
     prompt = f"""
 你是一位了解北一女中行政流程與校內事務的輔導老師，請根據下方提供的資料協助回答問題，
@@ -131,7 +129,7 @@ def generate_response_combined(task, keyword):
 問題：{task}
 
 相關內容：
-{relevant_content}
+{relevant_content if relevant_content else "（未找到其他相關內容）"}
 
 內建知識庫內容：
 1. 北一女中制服上衣是綠色的，運動服上衣是白色的。
@@ -142,17 +140,12 @@ def generate_response_combined(task, keyword):
 6. 北一女中光復樓是古蹟。
 7. 北一女中學珠樓是以江學珠校長的名字命名。
 8. 仁愛樓不在北一女中。
-
-來源：
-{page_url}
 """
 
     api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
     headers = {"Content-Type": "application/json"}
     payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": prompt}]}
-        ]
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}]
     }
 
     try:
@@ -166,7 +159,8 @@ def generate_response_combined(task, keyword):
                     attachments_text += "\n📎 附件下載：\n"
                     for name, link in pdf_links_collected:
                         attachments_text += f"- [{name}]({link})\n"
-                return model_reply + f"\n\n---\n🔗 [來源子頁面]({page_url})" + attachments_text
+                source_note = f"\n\n---\n🔗 [來源子頁面]({page_url})" if page_url else "\n\n---\n⚠️ 未從校網找到子頁面，僅根據內建知識庫與模型生成回答。"
+                return model_reply + source_note + attachments_text
             else:
                 return "❌ 無法取得模型回答"
         else:
