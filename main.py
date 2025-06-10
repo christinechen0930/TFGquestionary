@@ -157,7 +157,7 @@ def generate_response_combined(task, keyword):
                     attachments_text += "\n📎 附件下載：\n"
                     for name, link in pdf_links_collected:
                         attachments_text += f"- [{name}]({link})\n"
-                source_note = f"\n\n---\n🔗 [來源子頁面]({page_url})" if page_url else "\n\n---\n⚠️ 未從校網找到子頁面，僅根據內建知識庫與模型生成回答。"
+                source_note = f"\n\n---\n🔗 [來源子頁面]({page_url})" if page_url else "\n\n---\n⚠️ 未從校網找到子頁面。"
                 return model_reply + source_note + attachments_text
             else:
                 return "❌ 無法取得模型回答"
