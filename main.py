@@ -13,8 +13,17 @@ TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"]
 GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # ====== 頁面設定 ======
-st.set_page_config(page_title="🌿 綠園事務詢問欄", page_icon="🌱", layout="centered")
+st.set_page_config(page_title="\U0001F33F 綠園事務詢問欄", page_icon="\U0001F331", layout="centered")
 os.makedirs("downloads", exist_ok=True)
+
+# ====== 同義詞對照表 ======
+SYNONYMS = {
+    "段考": ["期中考", "期末考"],
+    "期中": ["期中考"],
+    "期末": ["期末考"],
+    "畢業典禮": ["畢典", "畢業典禮"],
+    # 可擴充更多
+}
 
 # ====== 模型加載 ======
 @st.cache_resource
@@ -51,18 +60,21 @@ def fetch_relevant_news_page(keyword):
         res = requests.get(news_url, timeout=10)
         res.raise_for_status()
     except Exception:
-        return None  # ❗ 改為回傳 None，不終止流程
+        return None
 
     soup = BeautifulSoup(res.text, "html.parser")
     links = soup.find_all("a", href=True)
 
+    search_keywords = SYNONYMS.get(keyword.strip(), [keyword.strip()])
+
     for link in links:
         title = link.get_text(strip=True)
         href = link["href"]
-        if keyword in title and "/news/" in href:
-            return urljoin(base_url, href)
+        if "/news/" in href:
+            if any(kw in title for kw in search_keywords):
+                return urljoin(base_url, href)
 
-    return None  # ❗ 沒找到就回 None
+    return None
 
 # ====== 找到相關段落 ======
 def retrieve_relevant_content(task, paragraphs):
@@ -96,7 +108,6 @@ def generate_response_combined(task, keyword):
                 content_text = soup.get_text()
                 cleaned_paragraphs.extend(clean_and_split_text(content_text))
 
-                # 擷取 PDF
                 pdf_links = {
                     urljoin(page_url, a["href"].replace(" ", "%20"))
                     for a in soup.find_all("a", href=True)
@@ -117,7 +128,6 @@ def generate_response_combined(task, keyword):
             except Exception as e:
                 cleaned_paragraphs.append(f"❌ 無法讀取子頁面內容：{e}")
 
-    # 🔍 不管有沒有找到網頁，都要繼續處理
     relevant_content = retrieve_relevant_content(task, cleaned_paragraphs)
 
     prompt = f"""
@@ -172,10 +182,10 @@ def generate_response_combined(task, keyword):
                 model_reply = response_json["candidates"][0]["content"]["parts"][0]["text"]
                 attachments_text = ""
                 if pdf_links_collected:
-                    attachments_text += "\n📎 附件下載：\n"
+                    attachments_text += "\n\U0001F4CE 附件下載：\n"
                     for name, link in pdf_links_collected:
                         attachments_text += f"- [{name}]({link})\n"
-                source_note = f"\n\n---\n🔗 [來源子頁面]({page_url})" if page_url else "\n\n---\n⚠️ 未從校網找到子頁面。"
+                source_note = f"\n\n---\n\U0001F517 [來源子頁面]({page_url})" if page_url else "\n\n---\n⚠️ 未從校網找到子頁面。"
                 return model_reply + source_note + attachments_text
             else:
                 return "❌ 無法取得模型回答"
@@ -185,7 +195,7 @@ def generate_response_combined(task, keyword):
         return f"❌ 請求失敗：{e}"
 
 # ====== Streamlit 介面 ======
-st.title("🌱 綠園事務詢問欄")
+st.title("\U0001F331 綠園事務詢問欄")
 
 task = st.text_input("輸入詢問事項", "例如：今年的畢業典禮是哪一天？")
 keyword = st.text_input("輸入關鍵字（從北一女校網最新消息中搜尋）", "例如：畢業典禮")
@@ -226,7 +236,7 @@ a.fake-button:hover {
 </style>
 
 <div class="button-container">
-    <a href="https://christinechen0930.github.io/TFGquestionary/TFGQA.html" target="_blank" class="fake-button">🔍 前往北一女中問答集</a>
-    <a href="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank" class="fake-button">📜 瞭解北一女校史</a>
+    <a href="https://christinechen0930.github.io/TFGquestionary/TFGQA.html" target="_blank" class="fake-button">\U0001F50D 前往北一女中問答集</a>
+    <a href="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank" class="fake-button">\U0001F4DC 瞭解北一女校史</a>
 </div>
 """, unsafe_allow_html=True)
