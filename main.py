@@ -8,33 +8,33 @@ from urllib.parse import urljoin, unquote, urlparse
 from sentence_transformers import SentenceTransformer, util
 import fitz  # PyMuPDF
 
-====== 設定 API Key ======
+# ====== 設定 API Key ======
 
 TAVILY_API_KEY = st.secrets["TAVILY_API_KEY"] GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 
-====== 頁面設定 ======
+# ====== 頁面設定 ======
 
 st.set_page_config(page_title="\U0001F33F 綠園事務詢問欄", page_icon="\U0001F331", layout="centered") os.makedirs("downloads", exist_ok=True)
 
-====== 同義詞對照表 ======
+# ====== 同義詞對照表 ======
 
 SYNONYMS = { "段考": ["期中考", "期末考"], "期中": ["期中考"], "期末": ["期末考"], "畢業典禮": ["畢典", "畢業典禮"], # 可擴充更多 }
 
-====== 模型加載 ======
+# ====== 模型加載 ======
 
 @st.cache_resource def load_model(): return SentenceTransformer("sentence-transformers/multi-qa-MiniLM-L6-cos-v1")
 
 model = load_model()
 
-====== 清理文字 ======
+# ====== 清理文字 ======
 
 def clean_and_split_text(text): text = re.sub(r"\s+", " ", text) text = re.sub(r"第\s*\d+\s*頁", "", text) paragraphs = re.split(r'(?<=[。！？])', text) return [p.strip() for p in paragraphs if len(p.strip()) > 10]
 
-====== 讀取 PDF ======
+# ====== 讀取 PDF ======
 
 def read_pdf(file_path): try: doc = fitz.Document(file_path) all_paragraphs = [] for page in doc: raw_text = page.get_text() paragraphs = clean_and_split_text(raw_text) all_paragraphs.extend(paragraphs) return all_paragraphs except Exception as e: return [f"讀取 PDF 錯誤：{str(e)}"]
 
-====== 擷取北一女最新消息中的關鍵字子頁面 ======
+# ====== 擷取北一女最新消息中的關鍵字子頁面 ======
 
 def fetch_relevant_news_page(keyword): base_url = "https://www.fg.tp.edu.tw" news_url = f"{base_url}/category/news/news1/" try: res = requests.get(news_url, timeout=10) res.raise_for_status() except Exception: return None
 
@@ -52,15 +52,15 @@ for link in links:
 
 return None
 
-====== 找到相關段落 ======
+# ====== 找到相關段落 ======
 
 def retrieve_relevant_content(task, paragraphs): if not paragraphs: return "" paragraph_embeddings = model.encode(paragraphs, convert_to_tensor=True) query_embedding = model.encode(task, convert_to_tensor=True) scores = util.pytorch_cos_sim(query_embedding, paragraph_embeddings)[0] top_k = min(10, len(paragraphs)) top_results = torch.topk(scores, k=top_k) return "\n".join([paragraphs[idx] for idx in top_results.indices])
 
-====== 從 URL 解析出原始檔名 ======
+# ====== 從 URL 解析出原始檔名 ======
 
 def get_filename_from_url(url): path = urlparse(url).path return unquote(os.path.basename(path)).replace(" ", "_")
 
-====== 整合回答邏輯 ======
+# ====== 整合回答邏輯 ======
 
 def generate_response_combined(task, keyword): cleaned_paragraphs = [] pdf_links_collected = [] page_url = None
 
