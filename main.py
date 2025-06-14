@@ -1,4 +1,11 @@
-import os import re import requests import torch import streamlit as st from bs4 import BeautifulSoup from urllib.parse import urljoin, unquote, urlparse from sentence_transformers import SentenceTransformer, util import fitz  # PyMuPDF
+import os
+import re
+import requests
+import torch
+import streamlit as st
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, unquote, urlparse
+from sentence_transformers import SentenceTransformer, util import fitz  # PyMuPDF
 
 ====== 設定 API Key ======
 
