@@ -132,10 +132,7 @@ def generate_response_combined(task, keyword):
 
     prompt = f"""
 你是一位了解北一女中行政流程與校內事務的輔導老師，請根據下方提供的資料協助回答問題，
-請使用繁體中文，以條列式或摘要方式簡潔表達，允許使用 Markdown 語法（**粗體**、*斜體*等），
-如果有人詢問到段考等關鍵字，將其視為期中考或期末考，且可以去搜尋行事曆。
-若關鍵字找不到資訊，不用管檔案標題，直接找有提到此關鍵字的檔案，
-如果關鍵字搜尋不到，就改成用使用者輸入的問題去搜尋。
+請使用繁體中文，以條列式或摘要方式簡潔表達，如果有人詢問到段考等關鍵字，將其視為期中考或期末考，且可以去搜尋行事曆。若關鍵字找不到資訊，不用管檔案標題，直接找有提到此關鍵字的檔案，如果關鍵字搜尋不到，就改成用使用者輸入的問題去搜尋。
 
 問題：{task}
 
@@ -143,19 +140,32 @@ def generate_response_combined(task, keyword):
 {relevant_content if relevant_content else "（未找到其他相關內容）"}
 
 關於北一女中的大小事：
-- **北一女中的制服**：綠色上衣配黑色百褶裙。運動服：白色上衣配黑色褲子。
-- **萬聖節可以穿任何服裝**，只要你敢穿來就沒人攔得住你，只是要記得帶學生證以便教官辨認身分。
-- **午餐選擇**：不能出校吃午餐，可至大小熱購買、訂外送、或自備便當。
-- **小熱販售**：零食、餅乾、炸物、土司，例如**薯不辣**（薯條+甜不辣）、**巧克力咔啦雞**（巧克力吐司+咔啦雞）等自由搭配。
-- **大熱販售**：滷肉飯、炒飯、鍋燒麵、便當，偶有**糖葫蘆**、**仙草蜜**、**芒果冰**等特別品項。
-- **光復樓**為古蹟。
-- **學珠樓**是以江學珠校長的名字命名。
-- **教學樓分布**：
-    - 光復樓：1F 學務/教務/校安/健康中心；2-3F 高一教室
-    - 學珠樓：2-3F 圖書館；4F 老師辦公室；5F 電腦教室；6F 演講廳
-    - 中正樓：1-3F 高二教室
-    - 至善樓：1F 輔導室；2-5F 高三教室；3-4F 實驗室；5F 美術教室
-    - 明德樓：1F 生科教室；2-3F 音樂教室
+1. 北一女中的制服：綠色上衣配黑色百褶裙。運動服：白色上衣配黑色褲子。
+2. 萬聖節可以穿任何服裝，只要你敢穿來就沒人攔得住你，只是要記得帶學生證以便教官辨認身分。
+3. 北一女中學生原則上不能出校吃午餐。午餐選擇有大小熱的食物，或者訂外送、自己帶便當。
+4. 小熱除了販賣零食、餅乾外，也有販售炸物及土司等，其中有些特別的組合，像是由薯條和甜不辣搭配而成的薯不辣和巧克力吐司配咔啦雞的巧克力咔啦雞，還有其他任何有販售的食物的自由搭配。
+5. 大熱除了賣滷肉飯、炒飯、鍋燒麵、便當等主食外，還時不時會販售一些特別的食物，像是近兩年有賣過糖葫蘆、仙草蜜、芒果冰。
+6. 北一女中光復樓是古蹟。
+7. 北一女中學珠樓是以江學珠校長的名字命名。
+8. 北一的教學樓有：
+    1.光復樓：日治時期的古蹟維修而成
+    • 1F：學務處、教務處、校安中心、健康中心
+    • 2、3F：高一教室
+    2.學珠樓：為紀念江學珠校長對北一的貢獻而命名
+    • 2、3F：圖書館
+    • 4F：老師辦公室
+    • 5F：電腦教室
+    • 6F：演講廳
+    3.中正樓：
+    • 1~3F：高二教室
+    4.至善樓：
+    • 1F：輔導室
+    • 2~5F：高三教室
+    • 3、4F：實驗室
+    • 5F：美術教室
+    5.明德樓：
+    • 1F：生科教室
+    • 2~3F：音樂教室。
 """
 
     api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
@@ -194,7 +204,7 @@ if st.button("生成回答"):
     with st.spinner('正在搜尋與生成回覆...'):
         response = generate_response_combined(task, keyword)
         st.success('處理完成！')
-        st.markdown(response, unsafe_allow_html=True)
+        st.markdown(response)
 
 st.markdown("---")
 
@@ -226,7 +236,7 @@ a.fake-button:hover {
 </style>
 
 <div class="button-container">
-    <a href="https://christinechen0930.github.io/TFGquestionary/TFGQA.html" target="_blank" class="fake-button">🔍 前往北一女中問答集</a>
-    <a href="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank" class="fake-button">📜 瞭解北一女校史</a>
+    <a href="https://christinechen0930.github.io/TFGquestionary/TFGQA.html" target="_blank" class="fake-button">\U0001F50D 前往北一女中問答集</a>
+    <a href="https://christinechen0930.github.io/TFGquestionary/TFGhistory.html" target="_blank" class="fake-button">\U0001F4DC 瞭解北一女校史</a>
 </div>
 """, unsafe_allow_html=True)
